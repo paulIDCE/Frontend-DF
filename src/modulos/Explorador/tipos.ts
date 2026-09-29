@@ -44,6 +44,8 @@ export interface CuadroCargado {
   unidad: string;
   filas: FilaCuadro[];
   notas: string[];
+  /** `arbol`: estados financieros detallados (jerarquia por `Codigo_Base`). */
+  vista?: "grupos" | "arbol";
   /** Sector/entidad al que pertenecen los datos (Sistema/Tasas), para la coleccion y el carrito. */
   sector?: string;
   sectorNombre?: string;

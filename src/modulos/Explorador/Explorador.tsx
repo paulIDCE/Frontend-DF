@@ -9,6 +9,7 @@ import { opcionSeries } from "./graficas";
 import { descargarCsv, descargarExcel } from "./descargas";
 import { useCarrito } from "./useCarrito";
 import TablaCuadro from "./TablaCuadro";
+import TablaBalances from "./TablaBalances";
 import PanelColeccion from "./PanelColeccion";
 import CarritoModal from "./CarritoModal";
 
@@ -249,14 +250,17 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
             No se encontraron datos{cuadro ? ` para: ${cuadro.id}` : ""}
           </div>
         ) : (
-          <TablaCuadro
-            filas={cuadro.filas}
-            periodos={visibles}
-            seleccionados={seleccionados}
-            onSeleccionar={onSeleccionar}
-            onGraficar={(i) => setSerieModal(serieDeFila(i))}
-            onCarrito={onCarrito}
-          />
+          (() => {
+            const props = {
+              filas: cuadro.filas,
+              periodos: visibles,
+              seleccionados,
+              onSeleccionar,
+              onGraficar: (i: number) => setSerieModal(serieDeFila(i)),
+              onCarrito,
+            };
+            return cuadro.vista === "arbol" ? <TablaBalances {...props} /> : <TablaCuadro {...props} />;
+          })()
         )}
 
         {cuadro && cuadro.notas.length > 0 && (

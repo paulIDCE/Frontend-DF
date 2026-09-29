@@ -57,7 +57,7 @@ Diferencias con el original:
 | Login | `index.html` + `script.js` | `modulos/Auth/Login.tsx` (antd `Form`, `swalSuccess/swalError`) |
 | Dashboard | `dashboard.html` | `modulos/Inicio/Dashboard.tsx` |
 | Macroeconómico | `macroeconomico.html` + `macro.js` | `modulos/Macro/Macroeconomico.tsx` sobre el explorador |
-| Sistema / Tasas | `sistema.*` / `tasas.*` | Fase 2, mismo explorador |
+| Sistema / Tasas | `sistema.*` / `tasas.*` | `modulos/Sistema/ExploradorSistema.tsx` (una sola implementación; Tasas sin "Cartera Total") + `cargarCuadro.ts` por tipo de cuadro; balances en árbol por `Codigo_Base` (`TablaBalances`) |
 | Análisis | `analisis.*` | Fase 3 |
 
 Explorador compartido (`src/modulos/Explorador/`): árbol "Contenidos" (antd `Tree` en `Drawer`,
@@ -71,6 +71,11 @@ que el original) y descarga Excel (`exportarExcel`, ahora `.xlsx` real) o CSV.
 - Menú Macro: `IEA413`/`IEA414` apuntaban a cuadros inexistentes → `IEA413A`/`IEA414A`.
 - Menú Macro trimestral: "2.2.5 Empresas Públicas No Financieras" cargaba `IEM224T` → `IEM225T`.
 - Filtro Desde/Hasta comparaba con `parseInt` ("2020-01" → 2020); ahora compara periodos completos.
+- Sistema/Tasas: al cambiar de entidad solo EFI06/EFI07/TEA02 recargaban con su loader; EFI08 y
+  EFI09 perdían el filtro de tipo de crédito. Ahora todo se recarga según el tipo de cuadro.
+- Sistema: el selector "Hasta" tenía una opción `2026` rotulada "2024"; los periodos ahora salen de
+  los datos.
+- Sistema/Tasas: código suelto que filtraba `balancesData` vacío al cargar el script (eliminado).
 - Descarga Excel repetía la columna "Grupo" en cada fila y abría `<tr>` sin cerrar.
 
 Pendientes de decidir (el menú apunta a cuadros que no están en los datos):

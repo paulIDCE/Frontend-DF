@@ -1,0 +1,80 @@
+/* ============================================
+   Estilos comunes del kit (shell y apps del iframe)
+   ============================================
+   Se publica como `@idce/kit/shell.css` (lo que importa el SSO) y forma la primera mitad de
+   `@idce/kit/base.css` (lo que importan las apps del iframe, junto con `iframe.css`).
+   Tipografía base, scrollbars, selección y foco. Solo variables de `tokens.css`.
+   Ver docs/TOKENS.md y docs/DISTRIBUCION.md.
+   ============================================ */
+
+:root {
+  font-family: var(--font-sans);
+  color: var(--color-tinta);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+/* ============================================
+   Scrollbars — identidad SSO
+   ============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-superficie-hundida);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(
+    180deg,
+    var(--color-prussian-blue-600),
+    var(--color-prussian-blue-700)
+  );
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(
+    180deg,
+    var(--color-prussian-blue-500),
+    var(--color-prussian-blue-600)
+  );
+}
+
+/* Tablas Ant Design — scrollbar */
+.ant-table-body::-webkit-scrollbar-thumb {
+  background: var(--color-prussian-blue-600);
+}
+.ant-table-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-prussian-blue-500);
+}
+
+/* ============================================
+   Selection
+   ============================================ */
+::selection {
+  background-color: var(--color-identidad);
+  color: var(--color-tinta-inversa);
+}
+
+/* ============================================
+   Focus styles
+   ============================================
+   El foco es territorio de ACCION, no de identidad (§3): marca un control que
+   el usuario esta por operar. Por eso va en accion y no en identidad. */
+*:focus-visible {
+  outline: 2px solid var(--color-accion);
+  outline-offset: 2px;
+}

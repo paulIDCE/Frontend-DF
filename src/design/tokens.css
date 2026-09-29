@@ -1,0 +1,180 @@
+/* ==========================================================================
+   GENERADO desde src/design/tokens.ts por vite.config.ts — NO EDITAR A MANO.
+   Cambiar el token en tokens.ts; este archivo se reescribe al arrancar dev o build.
+   ========================================================================== */
+
+/* `static`: todas las variables se emiten en :root aunque ninguna clase las use, para que
+   el CSS global (scrollbars, foco) pueda leerlas con var(). */
+@theme static {
+  /* Reinicio: solo existen los tokens del sistema */
+  --color-*: initial;
+  --text-*: initial;
+  --radius-*: initial;
+  --shadow-*: initial;
+
+  /* Primitivos (solo shell y paleta extendida; en componentes usar roles) */
+  --color-prussian-blue-50: #ebf0fa;
+  --color-prussian-blue-100: #d6e1f5;
+  --color-prussian-blue-200: #aec3ea;
+  --color-prussian-blue-300: #85a5e0;
+  --color-prussian-blue-400: #5d87d5;
+  --color-prussian-blue-500: #3469cb;
+  --color-prussian-blue-600: #2a54a2;
+  --color-prussian-blue-700: #1f3f7a;
+  --color-prussian-blue-800: #152a51;
+  --color-prussian-blue-900: #0a1529;
+  --color-prussian-blue-950: #070f1c;
+  --color-linen-50: #fff0e5;
+  --color-linen-100: #ffe0cc;
+  --color-linen-200: #ffc299;
+  --color-linen-300: #ffa366;
+  --color-linen-400: #ff8533;
+  --color-linen-500: #ff6600;
+  --color-linen-600: #cc5200;
+  --color-linen-700: #993d00;
+  --color-linen-800: #662900;
+  --color-linen-900: #331400;
+  --color-linen-950: #240e00;
+  --color-ivory-50: #f6f9eb;
+  --color-ivory-100: #edf3d8;
+  --color-ivory-200: #dbe7b1;
+  --color-ivory-300: #c9db8a;
+  --color-ivory-400: #b8cf63;
+  --color-ivory-500: #a6c33c;
+  --color-ivory-600: #859c30;
+  --color-ivory-700: #637524;
+  --color-ivory-800: #424e18;
+  --color-ivory-900: #21270c;
+  --color-ivory-950: #171b08;
+  --color-light-cyan-50: #e5fbff;
+  --color-light-cyan-100: #ccf7ff;
+  --color-light-cyan-200: #99f0ff;
+  --color-light-cyan-300: #66e8ff;
+  --color-light-cyan-400: #33e0ff;
+  --color-light-cyan-500: #00d9ff;
+  --color-light-cyan-600: #00adcc;
+  --color-light-cyan-700: #008299;
+  --color-light-cyan-800: #005766;
+  --color-light-cyan-900: #002b33;
+  --color-light-cyan-950: #001e24;
+  --color-baby-blue-ice-50: #e5eeff;
+  --color-baby-blue-ice-100: #ccdeff;
+  --color-baby-blue-ice-200: #99bdff;
+  --color-baby-blue-ice-300: #669cff;
+  --color-baby-blue-ice-400: #337aff;
+  --color-baby-blue-ice-500: #0059ff;
+  --color-baby-blue-ice-600: #0047cc;
+  --color-baby-blue-ice-700: #003699;
+  --color-baby-blue-ice-800: #002466;
+  --color-baby-blue-ice-900: #001233;
+  --color-baby-blue-ice-950: #000c24;
+
+  /* Color por rol */
+  --color-identidad: #1f3f7a;
+  --color-identidad-hover: #2a54a2;
+  --color-identidad-activo: #0a1529;
+  --color-identidad-sutil: #ebf0fa;
+  --color-enlace: #2563eb;
+  --color-enlace-hover: #1d4ed8;
+  --color-enlace-activo: #1e40af;
+  --color-accion: #2563eb;
+  --color-accion-hover: #1d4ed8;
+  --color-accion-activo: #1e40af;
+  --color-accion-sutil: #eff6ff;
+  --color-accion-sutil-hover: #dbeafe;
+  --color-accion-borde: #bfdbfe;
+  --color-accion-borde-hover: #93c5fd;
+  --color-tinta: #1e293b;
+  --color-tinta-secundaria: #475569;
+  --color-tinta-tenue: #64748b;
+  --color-tinta-deshabilitada: #94a3b8;
+  --color-tinta-inversa: #ffffff;
+  --color-superficie: #ffffff;
+  --color-superficie-sutil: #f8fafc;
+  --color-superficie-hundida: #f1f5f9;
+  --color-lienzo: #e2e8f0;
+  --color-linea: #e2e8f0;
+  --color-linea-sutil: #f1f5f9;
+  --color-linea-fuerte: #cbd5e1;
+  --color-velo: rgb(15 23 42 / 0.8);
+  --color-exito: #15803d;
+  --color-exito-hover: #166534;
+  --color-exito-activo: #14532d;
+  --color-exito-sutil: #f0fdf4;
+  --color-exito-borde: #bbf7d0;
+  --color-advertencia: #b45309;
+  --color-advertencia-hover: #92400e;
+  --color-advertencia-activo: #78350f;
+  --color-advertencia-sutil: #fffbeb;
+  --color-advertencia-borde: #fde68a;
+  --color-error: #991b1b;
+  --color-error-hover: #7f1d1d;
+  --color-error-activo: #450a0a;
+  --color-error-sutil: #fef2f2;
+  --color-error-borde: #fecaca;
+  --color-excel: #166534;
+  --color-excel-hover: #14532d;
+  --color-excel-activo: #052e16;
+  --color-pdf: #dc2626;
+  --color-pdf-hover: #b91c1c;
+  --color-pdf-activo: #991b1b;
+
+  /* Datos */
+  --color-serie-1: #2a78d6;
+  --color-serie-2: #eb6834;
+  --color-serie-3: #1baf7a;
+  --color-serie-4: #eda100;
+  --color-serie-5: #e87ba4;
+  --color-serie-6: #008300;
+  --color-serie-7: #4a3aa7;
+  --color-serie-8: #e34948;
+  --color-sin-datos: #e2e8f0;
+  --color-eje: #94a3b8;
+
+  /* Tipografía */
+  --font-sans: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-mono: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  --text-rotulo: 11px;
+  --text-rotulo--line-height: 16px;
+  --text-detalle: 12px;
+  --text-detalle--line-height: 16px;
+  --text-cuerpo: 14px;
+  --text-cuerpo--line-height: 22px;
+  --text-subtitulo: 16px;
+  --text-subtitulo--line-height: 24px;
+  --text-titulo: 18px;
+  --text-titulo--line-height: 26px;
+  --text-cifra: 24px;
+  --text-cifra--line-height: 26px;
+  --text-display: 30px;
+  --text-display--line-height: 38px;
+  --text-hero: 60px;
+  --text-hero--line-height: 60px;
+
+  /* Densidad del iframe (≈ zoom 90 %, sin CSS zoom) */
+  --densidad-ui: 0.9;
+
+  /* Espaciado (paso de p-*, m-*, gap-*, w-*, h-*) */
+  --spacing: 4px;
+
+  /* Radios */
+  --radius-marca: 2px;
+  --radius-control: 6px;
+  --radius-tarjeta: 8px;
+  --radius-contenedor: 12px;
+
+  /* Sombras */
+  --shadow-tarjeta: 0 4px 12px rgb(15 23 42 / 0.05);
+  --shadow-contenedor: 0 4px 6px -1px rgb(15 23 42 / 0.1), 0 2px 4px -2px rgb(15 23 42 / 0.1);
+  --shadow-elevada: 0 10px 15px -3px rgb(15 23 42 / 0.1), 0 4px 6px -4px rgb(15 23 42 / 0.1);
+
+  /* Movimiento */
+  --ease-estandar: cubic-bezier(0.2, 0, 0, 1);
+  --duracion-rapida: 150ms;
+  --duracion-base: 250ms;
+}
+
+/* Tailwind no expone --densidad-ui desde @theme (no es un namespace suyo). */
+:root {
+  --densidad-ui: 0.9;
+}

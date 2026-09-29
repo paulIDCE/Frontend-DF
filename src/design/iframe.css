@@ -1,0 +1,32 @@
+/* ============================================
+   Solo para las apps que se abren DENTRO del iframe del SSO
+   ============================================
+   Densidad 90 % y lienzo blanco. El shell NO lo importa: tiene su gutter gris (`lienzo`) y su
+   propia densidad de menú. En el paquete va dentro de `@idce/kit/base.css`, detrás de `shell.css`.
+   ============================================ */
+
+:root {
+  /* Misma cifra que `DENSIDAD_UI` en tokens.ts. Aquí (no solo en @theme) para
+     que el consumidor la lea: Tailwind no expone --densidad-ui desde @theme. */
+  --densidad-ui: 0.9;
+}
+
+/*
+  Densidad ≈ zoom 90 % del navegador, a escala 100 %.
+  No usar `zoom` / `transform: scale`: rompe iframe SSO, getBoundingClientRect y Firefox.
+  rem sigue a html; los px de antd se escalan en `temaAntd` (`scalePx`).
+*/
+html {
+  font-size: calc(100% * var(--densidad-ui, 0.9));
+}
+
+/*
+  El iframe es superficie (blanco). `lienzo` es el gutter gris del SSO, fuera
+  de este documento: no pintar html/body con él.
+*/
+html,
+body,
+#root,
+.App {
+  background-color: var(--color-superficie);
+}

@@ -1,0 +1,4 @@
+# Ajustes de pnpm 11. Antes vivian en el campo "pnpm" de package.json.
+# esbuild necesita su script de postinstall para bajar el binario nativo que usa Vite.
+allowBuilds:
+  esbuild: true

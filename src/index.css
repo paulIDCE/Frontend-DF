@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+/* Tailwind v4 escanea TODO el repo en busca de nombres de clase, incluida la
+   prosa de los .md. Los ejemplos de docs/ generaban utilidades muertas en el
+   bundle (p.ej. el patron obsoleto de botones que se documenta como "no usar"). */
+@source not "../docs/**/*.md";
+
+/* ============================================
+   Tokens del design system
+   ============================================
+   GENERADO desde src/design/tokens.ts (unica fuente de verdad). No escribir
+   colores, tamaños, radios ni sombras aqui ni en el markup: usar los roles
+   (text-tinta-secundaria, bg-superficie-sutil, rounded-contenedor...).
+   Ver docs/TOKENS.md.
+   ============================================ */
+@import "./design/tokens.css";
+
+/* Solo los estilos comunes. SIN `iframe.css`: esta app NO se abre dentro del
+   iframe del SSO (login y shell propios, ver docs/ARQUITECTURA_APP.md), asi
+   que va a escala 100 % y sin la densidad 0.9 de los satelites. */
+@import "./design/shell.css";
+
+:root {
+  --densidad-ui: 1;
+}

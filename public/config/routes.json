@@ -1,0 +1,9 @@
+{
+  "VITE_API_URL": "http://localhost:5097/api",
+  "VITE_BASE_URL": "http://localhost:5097/",
+  "VITE_API_SSO_URL": "http://localhost:81/api",
+  "VITE_BASE_SSO_URL": "http://localhost:81/",
+  "SUPABASE_URL": "https://mxpseuoksbrqsecukqou.supabase.co",
+  "SUPABASE_ANON_KEY": "sb_publishable_mGMXUplvTP0wCbGa7av4jg_Z01-xPaX",
+  "DATA_BASE_URL": "/data"
+}

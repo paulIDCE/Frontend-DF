@@ -1,6 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import type { RoutesConfig } from "@/types/routesConfig";
 import { AUTH_TOKEN_KEY, HTTP_TIMEOUT, devError } from "@idce/kit";
+import { getSupabase, supabaseDisponible } from "@/auth/supabase";
 
 /**
  * Capa HTTP central (§6).
@@ -15,10 +16,16 @@ import { AUTH_TOKEN_KEY, HTTP_TIMEOUT, devError } from "@idce/kit";
  */
 
 /**
- * El token vive en `localStorage` y lo comparten ambas instancias.
- * Se deja la cookie como fallback porque el SSO la escribe al redirigir.
+ * Token de la sesion de Supabase (login propio de la app): `getSession()`
+ * devuelve la sesion guardada y la renueva si el access_token expiro.
+ * `localStorage` y la cookie quedan como fallback para el SSO propio futuro.
  */
-const getAuthToken = (): string | undefined => {
+const getAuthToken = async (): Promise<string | undefined> => {
+  if (supabaseDisponible()) {
+    const { data } = await getSupabase().auth.getSession();
+    if (data.session) return data.session.access_token;
+  }
+
   const stored = localStorage.getItem(AUTH_TOKEN_KEY);
   if (stored) return stored;
 
@@ -29,15 +36,20 @@ const getAuthToken = (): string | undefined => {
     ?.replace(`${AUTH_TOKEN_KEY}=`, "");
 };
 
-const createClient = (): AxiosInstance => {
+/**
+ * `withCredentials` solo donde el backend lo permite: BackendDF no usa cookies y no manda
+ * `Access-Control-Allow-Credentials`, asi que con `true` el navegador descarta cada respuesta
+ * (CORS) y el interceptor la confunde con un backend caido.
+ */
+const createClient = (withCredentials: boolean): AxiosInstance => {
   const instance = axios.create({
     timeout: HTTP_TIMEOUT,
-    withCredentials: true,
+    withCredentials,
   });
 
   instance.interceptors.request.use(
-    (config) => {
-      const token = getAuthToken();
+    async (config) => {
+      const token = await getAuthToken();
       if (token) config.headers["Authorization"] = `Bearer ${token}`;
       return config;
     },
@@ -46,7 +58,7 @@ const createClient = (): AxiosInstance => {
 
   instance.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
       // Backend caido: no tiene sentido propagar el error a cada pantalla.
       if (!error.response && error.code === "ERR_NETWORK") {
         devError("Error de red detectado. Redirigiendo a /500.");
@@ -58,6 +70,8 @@ const createClient = (): AxiosInstance => {
       if (error.response?.status === 401) {
         devError("Sesion expirada o token invalido.");
         localStorage.removeItem(AUTH_TOKEN_KEY);
+        // Sin esto la sesion vencida de Supabase seguiria mandando el mismo token.
+        if (supabaseDisponible()) await getSupabase().auth.signOut().catch(() => undefined);
         // Evita el bucle si la propia pantalla de login devolvio 401.
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
@@ -72,10 +86,10 @@ const createClient = (): AxiosInstance => {
 };
 
 /** API propia de la app. */
-export const api = createClient();
+export const api = createClient(false);
 
 /** API del SSO: Empleado, Oficina, Catalogos y validateToken. */
-export const apiSSO = createClient();
+export const apiSSO = createClient(true);
 
 /** Registrada en `allServices` (indexService); la llama `ConfigProvider` al arrancar. */
 export const initializeAuthService = (config: RoutesConfig): void => {

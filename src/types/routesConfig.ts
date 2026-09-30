@@ -24,8 +24,6 @@ export interface RoutesConfig {
   SUPABASE_URL?: string;
   /** Publishable key de Supabase (publica por diseño, no es un secreto). */
   SUPABASE_ANON_KEY?: string;
-  /** Base de los JSON estaticos migrados de prueba-data. Por defecto `/data`. */
-  DATA_BASE_URL?: string;
 }
 
 /** Funcion que cada servicio expone para recibir las bases por inyeccion. */

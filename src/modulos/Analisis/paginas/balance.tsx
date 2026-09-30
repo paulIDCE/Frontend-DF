@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { Checkbox, Spin } from "antd";
 import { FallOutlined, MinusOutlined, RiseOutlined } from "@ant-design/icons";
 import { TEXTO_GRAFICA, TablaAnalitica, inicioZoom, useService, zoomTemporal } from "@idce/kit";
-import { leerJson } from "@/services/datosService";
+import { apiSeriesSistema } from "@/services/apiDatos";
+import { aFilasSistema } from "@/services/adaptadores";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica } from "../componentes";
 import { claseVar } from "../estilos";
@@ -101,14 +102,9 @@ export const Hoja1 = () => {
 
 /* ---------------------------- Hoja 2 ---------------------------- */
 
-interface FilaSistema {
-  Cuadro?: string;
-  Filtro?: string;
-  CUC?: string;
-  [k: string]: unknown;
-}
-
-const cargarSectores = () => leerJson<FilaSistema[]>("base_estru_sistema.json");
+/** Solo las cuentas y cuadros que usa la hoja (unos KB; antes, base_estru_sistema completo: 13 MB). */
+const cargarSectores = async () =>
+  aFilasSistema(await apiSeriesSistema(["@1", "@2", "@3", "Gan_Eje"], ["SFN01", "SFN02"]));
 
 const HISTORICOS = [
   { code: "@1", titulo: "Evolución histórica de Activo" },
@@ -121,10 +117,8 @@ export const Hoja2 = () => {
   const { ctx, etiquetas, sectores: marcados, setSectores } = useRevista();
   const { data: sistema, isLoading } = useService(cargarSectores, [], [], true, "No se pudieron cargar los sectores");
 
-  const filasSfn = useMemo(
-    () => (sistema ?? []).filter((f) => f.Cuadro === "SFN01" || f.Cuadro === "SFN02"),
-    [sistema]
-  );
+  // La API ya devuelve solo SFN01/SFN02.
+  const filasSfn = useMemo(() => sistema ?? [], [sistema]);
   const sectores = useMemo(() => [...new Set(filasSfn.map((f) => f.Filtro).filter(Boolean))] as string[], [filasSfn]);
 
   const alternar = (s: string, v: boolean) => setSectores(v ? [...marcados, s] : marcados.filter((x) => x !== s));

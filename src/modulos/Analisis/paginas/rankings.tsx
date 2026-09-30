@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Radio, Spin, Table } from "antd";
 import { TablaAnalitica, color, useService } from "@idce/kit";
+import { archivoEntidad } from "@/services/datosService";
+import { apiRanking } from "@/services/apiDatos";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica } from "../componentes";
 import { claseVar } from "../estilos";
 import { fechaCorta, fmt, variacion } from "../datos";
 import { colorSerie } from "../opciones";
-import { cargarResumenEntidades, valorEntidad } from "../resumenEntidades";
 
 /**
  * Rankings de entidades (hojas 5, 9, 24, 25, 26) — porte de `RANKING_CONFIGS`
@@ -14,8 +15,9 @@ import { cargarResumenEntidades, valorEntidad } from "../resumenEntidades";
  * provincia; tabla con participaciones, resumen de la entidad, posicion y
  * treemap de las 20 primeras.
  *
- * Corrige el filtro "Por Provincia": el original comparaba `DPR_PA` (columna
- * inexistente) y terminaba mostrando todas las entidades; aqui usa `DPA_PR`.
+ * El ranking lo calcula la API (`GET /api/rankings`), con el filtro "Por
+ * Provincia" ya corregido: el original comparaba `DPR_PA` (columna
+ * inexistente) y terminaba mostrando todas las entidades.
  */
 
 interface ConfigRanking {
@@ -28,39 +30,35 @@ interface ConfigRanking {
 
 type Filtro = "sector" | "activos" | "provincia";
 
+const cargarRanking = (cuenta: string, fecha: string, agrupacion: Filtro, entidad: string) =>
+  apiRanking({ cuenta, fecha, agrupacion, entidad: archivoEntidad(entidad) });
+
 const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
-  const { ctx, entidad, tamano, rango, provincia } = useRevista();
+  const { ctx, entidad } = useRevista();
   const [filtro, setFiltro] = useState<Filtro>("sector");
-  const { data: todas, isLoading } = useService(cargarResumenEntidades, [], [], true, "No se pudieron cargar las entidades");
+  // `fechaComparacion` de la API es `ctx.anioAnterior` (fecha - 12 meses).
+  const { data: respuesta, isLoading } = useService(
+    cargarRanking,
+    [c.cuenta, ctx.fecha, filtro, entidad],
+    [],
+    true,
+    "No se pudo cargar el ranking"
+  );
 
-  const ranking = useMemo(() => {
-    if (!todas) return [];
-    const ref = filtro === "sector" ? tamano : filtro === "activos" ? rango : provincia;
-    const campo = filtro === "sector" ? "tamano" : filtro === "activos" ? "rango" : "provincia";
-    const filas = todas
-      .filter((e) => e[campo] === ref)
-      .map((e) => ({
-        entidad: e.nombre,
-        anterior: valorEntidad(e, c.cuenta, ctx.anioAnterior),
-        actual: valorEntidad(e, c.cuenta, ctx.fecha),
-      }));
-    const tAnt = filas.reduce((s, f) => s + f.anterior, 0);
-    const tAct = filas.reduce((s, f) => s + f.actual, 0);
-    return filas
-      .map((f) => ({
-        ...f,
-        partAnterior: tAnt > 0 ? (f.anterior / tAnt) * 100 : 0,
-        partActual: tAct > 0 ? (f.actual / tAct) * 100 : 0,
-      }))
-      .sort((a, b) => b.partActual - a.partActual)
-      .map((f, i) => ({ ...f, posicion: i + 1 }));
-  }, [todas, filtro, tamano, rango, provincia, c.cuenta, ctx]);
-
-  const posicion = ranking.find((r) => r.entidad === entidad)?.posicion ?? 0;
-  const totales = {
-    anterior: ranking.reduce((s, f) => s + f.anterior, 0),
-    actual: ranking.reduce((s, f) => s + f.actual, 0),
-  };
+  const ranking = useMemo(
+    () =>
+      (respuesta?.filas ?? []).map((f) => ({
+        entidad: f.nombre,
+        anterior: f.anterior,
+        actual: f.actual,
+        partAnterior: f.participacionAnterior,
+        partActual: f.participacionActual,
+        posicion: f.posicion,
+      })),
+    [respuesta]
+  );
+  const posicion = respuesta?.posicionEntidad ?? 0;
+  const totales = respuesta?.total ?? { anterior: 0, actual: 0 };
 
   const podio = [color.advertencia.base, color.datos.eje, color.advertencia.activo];
   const treemap = {
@@ -155,7 +153,7 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Spin description="Cargando entidades (puede tardar la primera vez)..." size="large" />
+            <Spin description="Cargando ranking..." size="large" />
           </div>
         ) : (
           <TablaAnalitica

@@ -10,12 +10,10 @@ Interés y Análisis Financiero por entidad.
 > dice sobre "el SSO es el shell" aplica al kit, no a esta app. Detalles,
 > diferencias y pendientes: [docs/ARQUITECTURA_APP.md](docs/ARQUITECTURA_APP.md).
 
-Datos: los JSON de `prueba-data/data` se copian a `public/data/` (≈2.3 GB, no
-se versionan):
-
-```bash
-cp -r ../prueba-data/data/. public/data/
-```
+Datos: llegan de la API de `BackendDF` (`VITE_API_URL` en `public/config/routes.json`).
+Para desarrollo hay que levantarla (`dotnet run --project src/BackendDF`, puerto 5097) y
+servir el front en un origen que su CORS permita (`localhost:3000` o `localhost:51646`).
+Contrato: `BackendDF/docs/GUIA_CONSUMO_API_FRONTEND.md`.
 
 ---
 

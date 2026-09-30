@@ -533,7 +533,7 @@ Valores medidos sobre los datos actuales, con la misma lógica que hoy usa el fr
 | # | Petición | Resultado esperado |
 |---|---|---|
 | 1 | `GET /api/cuadros/IEA111A` | 13 filas, 26 períodos (2000-12 … 2025-12), `titulo` "OFERTA MONETARIA (M1) Y LIQUIDEZ TOTAL (M2)"; la fila 0 es "Especies Monetarias en Circulación (1)" con valor 2025-12 = 21549.2 (redondeado). |
-| 2 | `GET /api/cuadros/SFN01?sector=nacional` | 212 filas, 70 períodos (2021-05 … 2027-02). |
+| 2 | `GET /api/cuadros/SFN01?sector=nacional` | 212 filas, 69 períodos (2021-05 … 2027-01). Solo TPE01 llega a 2027-02. |
 | 3 | `GET /api/cuadros/SFN06?sector=nacional&analisis=saldo` | 1.517 filas, `vista: "arbol"`; 7 filas de nivel 1 con `padre: null` (ACTIVO … CUENTAS DE ORDEN); la fila "11.    FONDOS DISPONIBLES" tiene como `padre` a "1.    ACTIVO". |
 | 4 | `GET /api/cuadros/CAR01?sector=nacional&credito=total` | 42 filas. |
 | 5 | `GET /api/cuadros/TEA01?sector=seg1&credito=productivo` | 21 filas, `unidad` "Porcentajes". |

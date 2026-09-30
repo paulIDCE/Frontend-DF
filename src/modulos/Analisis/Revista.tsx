@@ -9,10 +9,9 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { EstadoError, LimiteError, useService } from "@idce/kit";
-import { leerJson } from "@/services/datosService";
 import { RevistaContext, type RevistaValor } from "./RevistaContext";
-import { MESES, crearCtx, fechasDe, type FilaReporte } from "./datos";
-import { cargarListaEntidades, infoDe, rutaReporte } from "./resumenEntidades";
+import { MESES, crearCtx, fechasDe } from "./datos";
+import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
 import { HOJAS } from "./paginas";
 
 /**
@@ -29,8 +28,6 @@ interface Props {
   onEntidad: (e: string) => void;
   onVolver: () => void;
 }
-
-const cargarReporte = (entidad: string) => leerJson<FilaReporte[]>(rutaReporte(entidad));
 
 const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
   const { data: filas, isLoading, apiError } = useService(cargarReporte, [entidad], [], true, "Sin datos disponibles para esta entidad.");

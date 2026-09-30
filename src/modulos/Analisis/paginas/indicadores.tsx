@@ -1,13 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Checkbox, Radio, Select, Spin, Tabs } from "antd";
 import { TEXTO_GRAFICA, TablaAnalitica, color, conAlfa, inicioZoom, showToast, useService, zoomTemporal } from "@idce/kit";
-import { leerJson } from "@/services/datosService";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica } from "../componentes";
 import { claseVar } from "../estilos";
 import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte } from "../datos";
 import { colorSerie, opcionHistorico } from "../opciones";
-import { cargarResumenEntidades, rutaReporte } from "../resumenEntidades";
+import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
 
@@ -387,11 +386,11 @@ export const Hoja28 = () => {
 
 const MAX_ADICIONALES = 3;
 
-const cargarAdicional = async (nombre: string) => ({ nombre, filas: await leerJson<FilaReporte[]>(rutaReporte(nombre)) });
+const cargarAdicional = async (nombre: string) => ({ nombre, filas: await cargarReporte(nombre) });
 
 export const Hoja31 = () => {
   const { ctx, entidad } = useRevista();
-  const { data: todas, isLoading } = useService(cargarResumenEntidades, [], [], true, "No se pudieron cargar las entidades");
+  const { data: todas, isLoading } = useService(cargarListaEntidades, [], [], true, "No se pudieron cargar las entidades");
   const [filtros, setFiltros] = useState({ tamano: "todos", provincia: "todos", rango: "todos" });
   const [elegidas, setElegidas] = useState<{ nombre: string; filas: FilaReporte[] }[]>([]);
 

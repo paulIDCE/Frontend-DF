@@ -43,12 +43,15 @@ Diferencias con el original:
 
 ## 3. Datos
 
-- Los JSON de `prueba-data/data` se sirven desde `public/data/` (≈2.3 GB, en `.gitignore`).
-  Base configurable con `DATA_BASE_URL` en `routes.json`.
-- Toda lectura pasa por `src/services/datosService.ts` (`leerJson`, cachea la promesa por archivo).
-  Cuando haya API, solo cambia este servicio.
-- Pendiente: los archivos grandes (`base_balances.json` 63 MB, `base_mensual.json` 15 MB) y la
-  carga de los 229 `reportes/*.json` para rankings deberían pasar a una API.
+- Los datos llegan de la API de `BackendDF` (`VITE_API_URL`); contrato en
+  `BackendDF/docs/GUIA_CONSUMO_API_FRONTEND.md` y tipos en `src/types/api.ts`.
+- `src/services/apiDatos.ts` hace las llamadas (cachea la promesa por URL) y
+  `src/services/adaptadores.ts` devuelve las filas en la forma "ancha" de los JSON de prueba-data,
+  así que tablas, gráficas, colección y carrito no cambiaron.
+- El token de Supabase va en `Authorization` (`authInterceptor`). `api` no manda cookies: la API
+  no permite credenciales por CORS.
+- Rankings y comparativo ya no descargan los 229 reportes: el ranking lo calcula la API.
+- `public/data` ya no se usa; si sigue en la carpeta local, `pnpm build` lo copiaría a `dist-app/`.
 
 ## 4. Pantallas y reutilización del kit
 
@@ -119,8 +122,7 @@ Pendientes de decidir (el menú apunta a cuadros que no están en los datos):
 
 ## 6. Despliegue y pendientes
 
-- `pnpm build` copia `public/data` (≈2.3 GB) a `dist-app/`. Para producción conviene servir los
-  datos aparte (o una API) y apuntar `DATA_BASE_URL` en `routes.json`.
+- Borrar `public/data` antes de `pnpm build`: la app ya no lo lee y Vite copiaría los ≈2.3 GB.
 - SSO propio: reemplazar `AuthContext` (ver §2).
 - El catálogo del kit (`/home`, `src/demos`, `src/guia`) solo se monta en desarrollo, pero sigue en
   el repositorio.

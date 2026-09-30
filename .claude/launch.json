@@ -5,7 +5,7 @@
       "name": "analisis-financiero-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
-      "port": 3000,
+      "port": 51646,
       "autoPort": true
     }
   ]

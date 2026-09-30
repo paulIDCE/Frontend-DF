@@ -4,7 +4,6 @@ import { initializeUserService } from "@/services/userService";
 import { initializeProvinciaService } from "@/services/provinciaService";
 import { initializeMenuService } from "@/services/menuService";
 import { initializeSupabase } from "@/auth/supabase";
-import { initializeDatosService } from "@/services/datosService";
 import { devGroup, devLog } from "@idce/kit";
 
 /**
@@ -22,7 +21,6 @@ const allServices: ServiceInitializer[] = [
   initializeProvinciaService,
   initializeMenuService,
   initializeSupabase,
-  initializeDatosService,
 ];
 
 export const initializeServices = (config: RoutesConfig): void => {

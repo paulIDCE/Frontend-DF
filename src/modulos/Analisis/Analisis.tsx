@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Select, Spin } from "antd";
 import {
   AppstoreOutlined,
@@ -15,9 +15,9 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 import { useService } from "@idce/kit";
-import { leerJson } from "@/services/datosService";
-import { cargarListaEntidades, infoDe, rutaReporte } from "./resumenEntidades";
-import type { FilaReporte } from "./datos";
+import { archivoEntidad } from "@/services/datosService";
+import { apiEntidad, apiMeta } from "@/services/apiDatos";
+import { cargarListaEntidades } from "./resumenEntidades";
 import Revista from "./Revista";
 
 /**
@@ -39,10 +39,18 @@ const REPORTES = [
   { tipo: "comparativo", pagina: 31, icono: BarChartOutlined, titulo: "Comparativa de Indicadores", texto: "Comparación de métricas clave por entidad financiera", oscuro: true },
 ];
 
-const cargarInfo = async (entidad: string) => infoDe(await leerJson<FilaReporte[]>(rutaReporte(entidad)));
+const cargarInfo = async (entidad: string) => {
+  const e = await apiEntidad(archivoEntidad(entidad));
+  return {
+    tamano: e.tamano ?? "Desconocido",
+    rango: e.rango ?? "Desconocido",
+    provincia: e.provincia ?? "Desconocido",
+  };
+};
 
-const ahora = () =>
-  new Date().toLocaleDateString("es-EC", {
+/** Fecha real de los datos (`versionDatos` de la API); antes se mostraba la hora actual. */
+const fmtVersion = (iso: string) =>
+  new Date(iso).toLocaleDateString("es-EC", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -54,15 +62,10 @@ const ahora = () =>
 const Analisis = () => {
   const [entidad, setEntidad] = useState(ENTIDAD_INICIAL);
   const [revista, setRevista] = useState<number | null>(null);
-  const [fechaHora, setFechaHora] = useState(ahora);
-
-  useEffect(() => {
-    const t = setInterval(() => setFechaHora(ahora()), 60000);
-    return () => clearInterval(t);
-  }, []);
 
   const { data: lista } = useService(cargarListaEntidades, [], [], true, "No se pudo cargar la lista de entidades");
   const { data: info, isLoading: cargandoInfo } = useService(cargarInfo, [entidad], [], true, "No se pudo cargar la entidad");
+  const { data: meta } = useService(apiMeta, [], [], true, "No se pudo obtener la fecha de los datos");
 
   const volver = useCallback(() => setRevista(null), []);
 
@@ -81,7 +84,7 @@ const Analisis = () => {
           <CalendarOutlined className="text-titulo text-accion" />
           <div className="flex flex-col">
             <span className="text-rotulo text-tinta-tenue">Datos actualizados</span>
-            <span className="font-semibold text-tinta">{fechaHora}</span>
+            <span className="font-semibold text-tinta">{meta ? fmtVersion(meta.versionDatos) : "…"}</span>
           </div>
         </div>
       </div>

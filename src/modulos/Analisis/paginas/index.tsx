@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
-import { HojaPendiente } from "../componentes";
 import { Hoja1, Hoja2 } from "./balance";
 import { Hoja3, Hoja4, Hoja6, Hoja7, Hoja8 } from "./estructuras";
 import { Hoja5, Hoja9, Hoja24, Hoja25, Hoja26 } from "./rankings";
 import { Hoja10, Hoja11 } from "./pyg";
 import { Hoja12, Hoja13, Hoja14, Hoja15, Hoja16 } from "./cartera";
+import { Hoja27, Hoja28, Hoja29, Hoja30, Hoja31 } from "./indicadores";
 import { Hoja17, Hoja18, Hoja19, Hoja20, Hoja21, Hoja22, Hoja23 } from "./operaciones";
 
 /** Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`). */
@@ -16,7 +16,7 @@ export interface Hoja {
   Componente: ComponentType;
 }
 
-const h = (numero: number, nombre: string, Componente: ComponentType = HojaPendiente): Hoja => ({ numero, nombre, Componente });
+const h = (numero: number, nombre: string, Componente: ComponentType): Hoja => ({ numero, nombre, Componente });
 
 export const HOJAS: Hoja[] = [
   h(1, "Balance General", Hoja1),
@@ -45,9 +45,9 @@ export const HOJAS: Hoja[] = [
   h(24, "Ranking Cartera Neta", Hoja24),
   h(25, "Ranking MOA", Hoja25),
   h(26, "Ranking MOP", Hoja26),
-  h(27, "Indicadores Financieros"),
-  h(28, "Indicadores CAMELS - PERLAS"),
-  h(29, "Evolución Indicadores CAMELS - PERLAS"),
-  h(30, "Tasas de Interés"),
-  h(31, "Comparación entre entidades"),
+  h(27, "Indicadores Financieros", Hoja27),
+  h(28, "Indicadores CAMELS - PERLAS", Hoja28),
+  h(29, "Evolución Indicadores CAMELS - PERLAS", Hoja29),
+  h(30, "Tasas de Interés", Hoja30),
+  h(31, "Comparación entre entidades", Hoja31),
 ];

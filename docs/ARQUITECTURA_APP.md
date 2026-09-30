@@ -58,13 +58,32 @@ Diferencias con el original:
 | Dashboard | `dashboard.html` | `modulos/Inicio/Dashboard.tsx` |
 | Macroeconómico | `macroeconomico.html` + `macro.js` | `modulos/Macro/Macroeconomico.tsx` sobre el explorador |
 | Sistema / Tasas | `sistema.*` / `tasas.*` | `modulos/Sistema/ExploradorSistema.tsx` (una sola implementación; Tasas sin "Cartera Total") + `cargarCuadro.ts` por tipo de cuadro; balances en árbol por `Codigo_Base` (`TablaBalances`) |
-| Análisis | `analisis.*` | Fase 3 |
+| Análisis | `analisis.*` | `modulos/Analisis/`: hub (`Analisis.tsx`) + revista de 31 hojas (`Revista.tsx`, `paginas/`) |
 
 Explorador compartido (`src/modulos/Explorador/`): árbol "Contenidos" (antd `Tree` en `Drawer`,
 generado de los HTML a `arboles/*.ts`), tabla por grupo/nivel (`TablaAnalitica`), "Mi Colección"
 (hasta 10 series, eje derecho, línea/barra) con `TarjetaGrafica` (su pantalla completa reemplaza
 "AMPLIAR"), gráfico individual, carrito persistente (`localStorage['carritoSeries']`, misma forma
 que el original) y descarga Excel (`exportarExcel`, ahora `.xlsx` real) o CSV.
+
+### Análisis Financiero (revista de 31 hojas)
+
+- `Revista.tsx`: barra (volver, PDF, etiquetas, año, mes, entidad), navegación y puntos. Solo se
+  monta la hoja activa (el original repintaba las 31 en cada cambio). "Descargar PDF" monta todas y
+  llama a `window.print()`.
+- `datos.ts`: contexto de cálculo por fecha de corte (`crearCtx`: mes y año anteriores, series,
+  variaciones). Reemplaza los globales `currentMagazineData`, `currentYear`, `currentMonth`.
+- `opciones.ts`: constructores ECharts (tres cortes, histórico con zoom a 12 meses, comparativo año
+  actual/anterior, mini de 6 meses) sobre la paleta del kit; todo se pinta con `TarjetaGrafica`.
+- Plantillas por configuración: `PaginaEstructura` (3, 4, 6-8), `PaginaPyG` (10-11), rankings
+  (5, 9, 24-26), cartera por segmento (13-16), segmentos de operaciones (19-23) y rejillas de
+  indicadores por categoría (27, 29, 30, 31). `paginas/indicadoresConfig.ts` se generó desde los
+  `CONFIG_INDICADORES*` del original.
+- `resumenEntidades.ts`: rankings y comparativo necesitan las 229 entidades. El original bajaba los
+  229 reportes (~283 MB) una vez por cada cuenta de ranking; aquí se barren una sola vez con
+  concurrencia 8 y se guardan solo las cuentas usadas.
+- Cada tarjeta del hub abre la revista en la primera hoja de su sección (1, 12, 27, 30, 31); el
+  original restauraba siempre la última hoja visitada.
 
 ## 5. Bugs del original corregidos
 
@@ -77,6 +96,19 @@ que el original) y descarga Excel (`exportarExcel`, ahora `.xlsx` real) o CSV.
   los datos.
 - Sistema/Tasas: código suelto que filtraba `balancesData` vacío al cargar el script (eliminado).
 - Descarga Excel repetía la columna "Grupo" en cada fila y abría `<tr>` sin cerrar.
+- Análisis, rankings: el filtro "Por Provincia" comparaba `DPR_PA` (columna inexistente) y mostraba
+  todas las entidades; ahora usa `DPA_PR`.
+- Análisis, hoja 26: repetía el título del ranking MOA; hoja 8: el histórico se rotulaba
+  "Depósitos a plazo".
+- Análisis, hoja 13-16: los mini KPIs son montos pero se mostraban con "%"; las series
+  `@1409..@1420` (refinanciada/reestructurada) se rotulaban "Cart. Bruta"/"Cart. Vencer".
+- Análisis, hoja 19: el KPI "Productivo Empresarial" volvía a pintar el corporativo (`proc`).
+- Análisis, hoja 21: el histórico de número de operaciones usaba `num_inmo` (inexistente) → `num_in`.
+- Análisis, hoja 22: la composición del número de operaciones usaba montos (`mino`, `mas`, `maa`).
+- Análisis, hoja 28: la leyenda CAMELS (vulnerabilidad <20% = A) contradecía el cálculo
+  (≥80 = A); la calificación se basa en `Indic_CAMELS_1` y ahora se rotula así.
+- Análisis, hoja 17: el resumen de turbulencia usaba siempre el último mes disponible; ahora usa la
+  fecha elegida en la barra.
 
 Pendientes de decidir (el menú apunta a cuadros que no están en los datos):
 - `IEA1102`, `IEA1103` (versiones "Agosto 2015 – Abril 2021"): en los datos, `IEA1102A`/`IEA1103A`
@@ -84,3 +116,11 @@ Pendientes de decidir (el menú apunta a cuadros que no están en los datos):
 - `IEA32A` (3.2 Balanza de Pagos…): sin datos.
 - Cuadros con datos pero sin entrada en el menú: `IEA323A`, `IEM331`, `IEM332`, `IEM351`,
   `IEM352`, `IEM425`.
+
+## 6. Despliegue y pendientes
+
+- `pnpm build` copia `public/data` (≈2.3 GB) a `dist-app/`. Para producción conviene servir los
+  datos aparte (o una API) y apuntar `DATA_BASE_URL` en `routes.json`.
+- SSO propio: reemplazar `AuthContext` (ver §2).
+- El catálogo del kit (`/home`, `src/demos`, `src/guia`) solo se monta en desarrollo, pero sigue en
+  el repositorio.

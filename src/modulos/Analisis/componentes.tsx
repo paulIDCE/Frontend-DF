@@ -202,5 +202,3 @@ export const MiniKpi = ({
     </div>
   );
 };
-
-export const HojaPendiente = () => <div className="py-24 text-center text-tinta-tenue">Hoja en migración.</div>;

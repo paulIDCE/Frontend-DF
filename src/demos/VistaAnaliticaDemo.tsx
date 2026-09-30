@@ -495,7 +495,7 @@ const VistaAnaliticaDemo = () => {
                         rowKey="fechaCorteID"
                         loading={consultando}
                         columns={columnasMatriz}
-                        dataSource={datos && FILAS_MATRIZ}
+                        dataSource={datos ? FILAS_MATRIZ : []}
                         pagination={false}
                         scroll={{ x: "max-content", y: alto - 32 }}
                       />

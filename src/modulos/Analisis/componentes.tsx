@@ -180,8 +180,7 @@ export const MiniKpi = ({
   const tendencia = vm > 0.5 ? ["↑", "Subiendo"] : vm < -0.5 ? ["↓", "Bajando"] : ["→", "Estable"];
   return (
     <div className="flex flex-col rounded-tarjeta border border-linea bg-superficie p-2">
-      <div className="flex items-baseline justify-between gap-2">
-        <span className="text-rotulo font-bold uppercase text-tinta-secundaria">{titulo}</span>
+      <div className="flex items-baseline justify-end gap-2">
         <span className="text-subtitulo font-extrabold text-identidad">
           {sufijo === "%" ? `${actual.toFixed(2)}%` : fmt(actual)}
         </span>

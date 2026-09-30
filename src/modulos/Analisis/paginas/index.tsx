@@ -4,6 +4,8 @@ import { Hoja1, Hoja2 } from "./balance";
 import { Hoja3, Hoja4, Hoja6, Hoja7, Hoja8 } from "./estructuras";
 import { Hoja5, Hoja9, Hoja24, Hoja25, Hoja26 } from "./rankings";
 import { Hoja10, Hoja11 } from "./pyg";
+import { Hoja12, Hoja13, Hoja14, Hoja15, Hoja16 } from "./cartera";
+import { Hoja17, Hoja18, Hoja19, Hoja20, Hoja21, Hoja22, Hoja23 } from "./operaciones";
 
 /** Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`). */
 
@@ -28,18 +30,18 @@ export const HOJAS: Hoja[] = [
   h(9, "Ranking Pasivos", Hoja9),
   h(10, "PyG Mensual", Hoja10),
   h(11, "PyG Anual", Hoja11),
-  h(12, "Intermediación Financiera"),
-  h(13, "Cartera Productiva"),
-  h(14, "Cartera Consumo"),
-  h(15, "Cartera Inmobiliario"),
-  h(16, "Cartera Microcrédito"),
-  h(17, "Índice de Turbulencia"),
-  h(18, "Monto Activas y Pasivas"),
-  h(19, "Monto Activas Seg. Productivo"),
-  h(20, "Monto Activas Seg. Consumo y Educativo"),
-  h(21, "Monto Activas Seg. Inmobiliario Y Vivienda"),
-  h(22, "Monto Activas Seg. Microcrédito"),
-  h(23, "Monto de Operaciones Pasivas"),
+  h(12, "Intermediación Financiera", Hoja12),
+  h(13, "Cartera Productiva", Hoja13),
+  h(14, "Cartera Consumo", Hoja14),
+  h(15, "Cartera Inmobiliario", Hoja15),
+  h(16, "Cartera Microcrédito", Hoja16),
+  h(17, "Índice de Turbulencia", Hoja17),
+  h(18, "Monto Activas y Pasivas", Hoja18),
+  h(19, "Monto Activas Seg. Productivo", Hoja19),
+  h(20, "Monto Activas Seg. Consumo y Educativo", Hoja20),
+  h(21, "Monto Activas Seg. Inmobiliario Y Vivienda", Hoja21),
+  h(22, "Monto Activas Seg. Microcrédito", Hoja22),
+  h(23, "Monto de Operaciones Pasivas", Hoja23),
   h(24, "Ranking Cartera Neta", Hoja24),
   h(25, "Ranking MOA", Hoja25),
   h(26, "Ranking MOP", Hoja26),

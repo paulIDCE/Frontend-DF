@@ -243,7 +243,7 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
           </div>
         ) : cargando ? (
           <div className="flex justify-center py-16">
-            <Spin size="large" tip="Cargando datos..." />
+            <Spin size="large" description="Cargando datos..." />
           </div>
         ) : !cuadro || cuadro.filas.length === 0 ? (
           <div className="py-16 text-center text-tinta-tenue">

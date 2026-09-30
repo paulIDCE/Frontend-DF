@@ -29,6 +29,7 @@ const Dashboard = lazy(() => import("@/modulos/Inicio/Dashboard"));
 const Macroeconomico = lazy(() => import("@/modulos/Macro/Macroeconomico"));
 const SistemaFinanciero = lazy(() => import("@/modulos/Sistema/SistemaFinanciero"));
 const TasasInteres = lazy(() => import("@/modulos/Tasas/TasasInteres"));
+const Analisis = lazy(() => import("@/modulos/Analisis/Analisis"));
 
 // Catalogo de componentes del kit: solo en desarrollo.
 const Home = import.meta.env.DEV ? lazy(() => import("@/home")) : null;
@@ -62,6 +63,7 @@ const AppRoutes = () => (
         <Route path="/macro" element={<Macroeconomico />} />
         <Route path="/sistema" element={<SistemaFinanciero />} />
         <Route path="/tasas" element={<TasasInteres />} />
+        <Route path="/analisis" element={<Analisis />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/404" replace />} />

@@ -18,27 +18,39 @@ export const initializeDatosService = (config: RoutesConfig): void => {
 
 const cache = new Map<string, Promise<unknown>>();
 
+const url = (ruta: string) => `${BASE}/${ruta.replace(/^\/+/, "")}`;
+
 export const leerJson = <T>(ruta: string): Promise<T> => {
-  const url = `${BASE}/${ruta.replace(/^\/+/, "")}`;
-  let promesa = cache.get(url) as Promise<T> | undefined;
+  const u = url(ruta);
+  let promesa = cache.get(u) as Promise<T> | undefined;
   if (!promesa) {
-    promesa = fetch(url).then(async (r) => {
+    promesa = fetch(u).then(async (r) => {
       if (!r.ok) throw new Error(`No se pudo cargar ${ruta} (${r.status})`);
       return (await r.json()) as T;
     });
     // Un fallo no se queda cacheado: el siguiente intento vuelve a pedirlo.
     promesa.catch((e) => {
       devError("[datos]", e);
-      cache.delete(url);
+      cache.delete(u);
     });
-    cache.set(url, promesa);
+    cache.set(u, promesa);
   }
   return promesa;
+};
+
+/**
+ * Lectura sin cache, para barridos grandes (los 229 reportes de rankings):
+ * quien llama se queda solo con lo que necesita y el resto se libera.
+ */
+export const leerJsonSinCache = async <T>(ruta: string): Promise<T> => {
+  const r = await fetch(url(ruta));
+  if (!r.ok) throw new Error(`No se pudo cargar ${ruta} (${r.status})`);
+  return (await r.json()) as T;
 };
 
 /** `BP. PICHINCHA` -> `BP__PICHINCHA` (nombre de archivo por entidad, igual que prueba-data). */
 export const archivoEntidad = (nombre: string): string =>
   nombre
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "") // marcas diacriticas (tildes) tras NFD
     .replace(/[^A-Za-z0-9]/g, "_");

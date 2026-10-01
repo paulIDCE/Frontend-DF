@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { Segmented } from "antd";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
 import { opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../opciones";
@@ -9,6 +11,44 @@ import { opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../op
  * Corrige: los mini KPIs de 13-16 son montos, pero el original les agregaba
  * "%" (reutilizaba el formato de morosidad de la hoja 12).
  */
+
+/** Los 6 segmentos del catalogo (sufijo `_n` de `IF010` / `IF012`). */
+const SEGMENTOS: [number, string][] = [
+  [1, "Productivo"],
+  [2, "Consumo"],
+  [3, "Inmobiliario"],
+  [4, "Microcrédito"],
+  [5, "Vivienda int. social"],
+  [6, "Educativo"],
+];
+
+/** Cartera en riesgo por segmento, en saldo (improductiva, apilada) o en indice (morosidad). */
+const CarteraRiesgoSegmentos = () => {
+  const { ctx, etiquetas } = useRevista();
+  const [vista, setVista] = useState<"saldo" | "indice">("indice");
+  const series = SEGMENTOS.filter(([n]) => ctx.fila(`IF012_${n}`)).map(([n, name]) =>
+    vista === "saldo" ? { code: `IF010_${n}`, name, type: "bar" as const } : { code: `IF012_${n}`, name },
+  );
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <Segmented
+        size="small"
+        className="self-end"
+        value={vista}
+        onChange={(v) => setVista(v as "saldo" | "indice")}
+        options={[
+          { value: "indice", label: "Índice (%)" },
+          { value: "saldo", label: "Saldo (millones USD)" },
+        ]}
+      />
+      <Grafica
+        titulo={vista === "saldo" ? "Cartera improductiva por segmento" : "Morosidad por segmento"}
+        option={opcionHistorico(ctx, series, etiquetas, { izq: vista === "saldo" ? "millones USD" : "porcentajes (%)" })}
+        alto={320}
+      />
+    </div>
+  );
+};
 
 const KPIS_CARTERA = ["CARTERA BRUTA", "CARTERA NETA", "CARTERA POR VENCER", "CARTERA VENCIDA", "CARTERA NO DEV. INT."];
 
@@ -57,9 +97,25 @@ export const Hoja12 = () => {
             />
             <Grafica titulo="Índice de Morosidad" option={opcionComparativoAnual(ctx, "IF012", etiquetas, { eje: "porcentaje (%)" })} alto={280} />
           </div>
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <CarteraRiesgoSegmentos />
+            <Grafica
+              titulo="Cartera Refinanciada y Reestructurada (todos los segmentos)"
+              option={opcionHistorico(
+                ctx,
+                [
+                  { code: "DER_CART_REFIN", name: "Refinanciada", type: "bar" },
+                  { code: "DER_CART_REEST", name: "Reestructurada", type: "bar" },
+                ],
+                etiquetas
+              )}
+              alto={348}
+            />
+          </div>
         </div>
         <div className="grid grid-cols-2 content-start gap-2">
           <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" indiceColor={7} />
+          <MiniKpi titulo="CASTIGOS (PERLAS P4)" code="P4_Castigados" tipo="line" indiceColor={5} />
           <MiniKpi titulo="REND. CART. TOTAL" code="SB036" tipo="line" indiceColor={0} />
           <MiniKpi titulo="REND. CART. PRODUCTIVO" code="SB037" tipo="bar" indiceColor={2} />
           <MiniKpi titulo="REND. CART. CONSUMO" code="SB038" tipo="line" indiceColor={3} />

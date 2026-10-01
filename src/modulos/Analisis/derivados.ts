@@ -16,8 +16,20 @@ interface Derivado {
   cuc: string;
   variable: string;
   /** Valor en el periodo `i`; `null` si no se puede calcular (denominador 0 o sin datos). */
-  calcular: (v: Valor, i: number, promedio: (code: string, i: number) => number) => number | null;
+  calcular: (v: Valor, i: number, promedio: (code: string, i: number) => number, suma: (re: RegExp, i: number) => number) => number | null;
 }
+
+/** Filas de cartera por segmento: "CONSUMO - Cartera Refinanciada por Vencer", "… COVID-19", etc. */
+const SEGMENTO = "^(PRODUCTIVO|CONSUMO|INMOBILIARIO|MICROCRÉDITO|EDUCATIVO|VIV\\. INT\\. PUB\\. SOC\\.) - Cartera ";
+const RE_REFINANCIADA = new RegExp(`${SEGMENTO}.*refinanciada`, "i");
+const RE_REESTRUCTURADA = new RegExp(`${SEGMENTO}.*reestructura`, "i");
+
+/**
+ * Cobertura de un segmento sin cartera improductiva: el cociente explota (p. ej. 7,6 millones %
+ * con 0,000008 de improductiva). Por debajo de 1.000 USD se deja sin dato.
+ */
+const coberturaSiHayMora = (cobertura: string, improductiva: string): Derivado["calcular"] => (v, i) =>
+  v(improductiva, i) >= 0.001 ? v(cobertura, i) : null;
 
 const cociente = (a: number, b: number, factor = 100): number | null => (b ? (a / b) * factor : null);
 
@@ -47,6 +59,26 @@ export const DERIVADOS: Derivado[] = [
     variable: "SOSTENIBILIDAD OPERACIONAL",
     calcular: (v, i) => cociente(v("@5A", i), v("@41A", i) + v("@44A", i) + v("@45A", i)),
   },
+  {
+    cuc: "DER_CART_REFIN",
+    variable: "CARTERA REFINANCIADA TOTAL (POR VENCER, VENCIDA Y NO DEVENGA)",
+    calcular: (_v, i, _p, suma) => suma(RE_REFINANCIADA, i),
+  },
+  {
+    cuc: "DER_CART_REEST",
+    variable: "CARTERA REESTRUCTURADA TOTAL (POR VENCER, VENCIDA Y NO DEVENGA)",
+    calcular: (_v, i, _p, suma) => suma(RE_REESTRUCTURADA, i),
+  },
+  {
+    cuc: "DER_COB_VIS",
+    variable: "COBERTURA DE LA CARTERA DE VIVIENDA DE INTERÉS SOCIAL Y PÚBLICO",
+    calcular: coberturaSiHayMora("SB033", "IF010_5"),
+  },
+  {
+    cuc: "DER_COB_EDU",
+    variable: "COBERTURA DE LA CARTERA EDUCATIVO",
+    calcular: coberturaSiHayMora("SB034", "IF010_6"),
+  },
 ];
 
 const num = (x: unknown): number | null => {
@@ -70,10 +102,13 @@ export const agregarDerivados = (filas: FilaReporte[]): FilaReporte[] => {
     return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
   };
 
+  const suma = (re: RegExp, i: number) =>
+    filas.reduce((acc, f) => (re.test(String(f.Variable ?? "")) ? acc + (num(f[fechas[i]]) ?? 0) : acc), 0);
+
   const nuevas = DERIVADOS.map((d) => {
     const fila: FilaReporte = { CUC: d.cuc, Variable: d.variable };
     fechas.forEach((f, i) => {
-      const x = d.calcular(v, i, promedio);
+      const x = d.calcular(v, i, promedio, suma);
       fila[f] = x === null || !Number.isFinite(x) ? null : x;
     });
     return fila;

@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "nota": "Catalogo v1 del motor de diagnostico (plan 06, item 1.12). Los umbrales de 'estructura' son los del original (prueba-data), sin cambios. Los de 'reglas' son PROVISIONALES: no tienen fuente y se calibran en el item 4.6. Unidades: 'dif*' en puntos porcentuales (pp); 'var*' en % de variacion; 'nivel' en la unidad del indicador.",
+  "estructura": {
+    "perspectiva": { "crecimientoSolido": 10, "contraccion": -5 },
+    "concentracion": { "alta": 50, "baja": 30 }
+  },
+  "reglas": [
+    {
+      "id": "activo.crecimiento",
+      "indicador": "@1",
+      "nombre": "El activo",
+      "bloque": "estructura",
+      "medida": "varAnual",
+      "condicion": { "op": ">", "valor": 10 },
+      "severidad": "positiva",
+      "plantilla": "{nombre} crece {var} en el año, hasta {valor} millones USD."
+    },
+    {
+      "id": "activo.contraccion",
+      "indicador": "@1",
+      "nombre": "El activo",
+      "bloque": "estructura",
+      "medida": "varAnual",
+      "condicion": { "op": "<", "valor": -5 },
+      "severidad": "media",
+      "plantilla": "{nombre} se contrae {var} en el año, hasta {valor} millones USD."
+    },
+    {
+      "id": "cartera.contraccion",
+      "indicador": "IF011",
+      "nombre": "La cartera bruta",
+      "bloque": "cartera",
+      "medida": "varAnual",
+      "condicion": { "op": "<", "valor": -5 },
+      "severidad": "media",
+      "plantilla": "{nombre} se contrae {var} en el año, hasta {valor} millones USD."
+    },
+    {
+      "id": "morosidad.sube.alta",
+      "indicador": "IF012",
+      "nombre": "La morosidad",
+      "bloque": "cartera",
+      "medida": "difAnual",
+      "condicion": { "op": ">", "valor": 1 },
+      "severidad": "alta",
+      "plantilla": "{nombre} sube {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "morosidad.sube",
+      "indicador": "IF012",
+      "nombre": "La morosidad",
+      "bloque": "cartera",
+      "medida": "difAnual",
+      "condicion": { "op": "entre", "valor": [0.5, 1] },
+      "severidad": "media",
+      "plantilla": "{nombre} sube {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "morosidad.baja",
+      "indicador": "IF012",
+      "nombre": "La morosidad",
+      "bloque": "cartera",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -0.5 },
+      "severidad": "positiva",
+      "plantilla": "{nombre} baja {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "solvencia.minimo",
+      "indicador": "SOLVENCIA",
+      "nombre": "La solvencia (patrimonio técnico)",
+      "bloque": "solvencia",
+      "medida": "nivel",
+      "condicion": { "op": "<", "valor": 9 },
+      "severidad": "alta",
+      "plantilla": "{nombre} es {valor} %, bajo el 9 % de referencia (límite normativo por confirmar)."
+    },
+    {
+      "id": "solvencia.cae",
+      "indicador": "SOLVENCIA",
+      "nombre": "La solvencia (patrimonio técnico)",
+      "bloque": "solvencia",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -1 },
+      "severidad": "media",
+      "plantilla": "{nombre} cae {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "liquidez.cae",
+      "indicador": "IF006",
+      "nombre": "La liquidez (fondos disponibles / depósitos a corto plazo)",
+      "bloque": "liquidez",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -3 },
+      "severidad": "media",
+      "plantilla": "{nombre} cae {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "roa.perdida",
+      "indicador": "IF002",
+      "nombre": "El ROA",
+      "bloque": "rentabilidad",
+      "medida": "nivel",
+      "condicion": { "op": "<", "valor": 0 },
+      "severidad": "alta",
+      "plantilla": "{nombre} es negativo ({valor} %): la entidad registra pérdidas."
+    },
+    {
+      "id": "roa.cae",
+      "indicador": "IF002",
+      "nombre": "El ROA",
+      "bloque": "rentabilidad",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -0.25 },
+      "severidad": "media",
+      "plantilla": "{nombre} cae {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "roe.sube",
+      "indicador": "IF004",
+      "nombre": "El ROE",
+      "bloque": "rentabilidad",
+      "medida": "difAnual",
+      "condicion": { "op": ">", "valor": 2 },
+      "severidad": "positiva",
+      "plantilla": "{nombre} mejora {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "roe.cae",
+      "indicador": "IF004",
+      "nombre": "El ROE",
+      "bloque": "rentabilidad",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -2 },
+      "severidad": "media",
+      "plantilla": "{nombre} cae {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "eficiencia.gasto",
+      "indicador": "gast_oper_ac",
+      "nombre": "El gasto de operación sobre el activo",
+      "bloque": "rentabilidad",
+      "medida": "difAnual",
+      "condicion": { "op": ">", "valor": 0.3 },
+      "severidad": "baja",
+      "plantilla": "{nombre} sube {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "fondeo.costo",
+      "indicador": "DER_COSTO_FONDEO",
+      "nombre": "El costo de fondeo",
+      "bloque": "tasas",
+      "medida": "difAnual",
+      "condicion": { "op": ">", "valor": 0.5 },
+      "severidad": "media",
+      "plantilla": "{nombre} sube {dif} pp en el año, hasta {valor} %."
+    },
+    {
+      "id": "camels.cae",
+      "indicador": "Indic_CAMELS_1",
+      "nombre": "El indicador CAMELS",
+      "bloque": "solvencia",
+      "medida": "difAnual",
+      "condicion": { "op": "<", "valor": -5 },
+      "severidad": "media",
+      "plantilla": "{nombre} cae {dif} puntos en el año, hasta {valor}."
+    }
+  ]
+}

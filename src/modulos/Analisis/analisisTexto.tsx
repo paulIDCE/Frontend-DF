@@ -2,11 +2,13 @@ import type { ReactNode } from "react";
 import { useRevista } from "./RevistaContext";
 import { fmt, type Dato } from "./datos";
 import { PanelAnalisis, Seccion, Var } from "./componentes";
+import { UMBRALES_ESTRUCTURA } from "./diagnostico/motor";
 
 /**
  * Textos de "Análisis Dinámico" de las hojas de estructura — porte de
  * `generateDynamicAnalysis*` (3, 6, 7, 8). Mismas reglas y umbrales que el
- * original; las frases que cambian por hoja van en la configuracion.
+ * original; las frases que cambian por hoja van en la configuracion y los umbrales, en el
+ * catalogo del motor de diagnostico (`diagnostico/reglas.json`, seccion `estructura`).
  */
 
 export interface ConfigAnalisis {
@@ -30,6 +32,8 @@ export interface ConfigAnalisis {
     estrategia: string;
   };
 }
+
+const { perspectiva: UMBRAL_PERSPECTIVA, concentracion: UMBRAL_CONCENTRACION } = UMBRALES_ESTRUCTURA;
 
 const tendencia = (v: number) => (v > 0 ? "crecimiento" : v < 0 ? "decrecimiento" : "estabilidad");
 const icono = (v: number) => (v > 0 ? "📈" : v < 0 ? "📉" : "➡️");
@@ -96,20 +100,20 @@ export const AnalisisEstructura = ({ config: c }: { config: ConfigAnalisis }) =>
         )}
         {pctConc !== null && c.concentracion && (
           <>
-            {pctConc > 50 && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).alta}</p>}
-            {pctConc < 30 && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).baja}</p>}
+            {pctConc > UMBRAL_CONCENTRACION.alta && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).alta}</p>}
+            {pctConc < UMBRAL_CONCENTRACION.baja && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).baja}</p>}
           </>
         )}
         {c.hallazgoExtra?.(ctx.dato)}
       </Seccion>
 
       <Seccion tipo="perspectiva" titulo="Perspectiva">
-        {p && p.varAnual > 10 ? (
+        {p && p.varAnual > UMBRAL_PERSPECTIVA.crecimientoSolido ? (
           <p>
             {c.perspectiva.sujeto} {pl ? "muestran" : "muestra"} un <strong>crecimiento anual sólido</strong> del{" "}
             {p.varAnual.toFixed(2)}%, reflejando expansión en {c.perspectiva.expansion}.
           </p>
-        ) : p && p.varAnual < -5 ? (
+        ) : p && p.varAnual < UMBRAL_PERSPECTIVA.contraccion ? (
           <p>
             🎯 {c.perspectiva.sujeto} {pl ? "presentan" : "presenta"} una <strong>contracción anual</strong> del{" "}
             {p.varAnual.toFixed(2)}%, lo cual requiere atención en la estrategia de {c.perspectiva.estrategia}.

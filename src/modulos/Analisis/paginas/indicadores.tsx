@@ -22,6 +22,7 @@ import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
 import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
+import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -240,6 +241,9 @@ const CATEGORIAS_27 = [...INDICADORES_27, ...COMPLEMENTARIOS_27];
 export const Hoja27 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS" subtitulo="Métricas clave de desempeño financiero" />
+    <div className="mb-3">
+      <PanelDiagnostico />
+    </div>
     <RejillaIndicadores categorias={CATEGORIAS_27} navegacion={NAVEGACION_27} />
   </>
 );

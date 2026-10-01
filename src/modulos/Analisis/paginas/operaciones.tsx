@@ -1,7 +1,7 @@
-import { TEXTO_GRAFICA, color, inicioZoom, zoomTemporal } from "@idce/kit";
+import { TEXTO_GRAFICA, color } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
-import { fechaCorta, fechaLarga, fmt, type Ctx } from "../datos";
+import { fechaCorta, fechaLarga, fmt, type Ctx, zoomRevista } from "../datos";
 import { opcionHistorico, opcionTresCortes, type SerieHistorica } from "../opciones";
 
 /**
@@ -63,7 +63,7 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
         splitLine: { show: false },
       },
     ],
-    dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, 12)),
+    dataZoom: zoomRevista(ctx, 12),
     series: [
       {
         name: "Índice de Turbulencia",

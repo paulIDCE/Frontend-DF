@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { Radio, Spin, Table } from "antd";
-import { TablaAnalitica, color, useService } from "@idce/kit";
+import { TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
 import { archivoEntidad } from "@/services/datosService";
 import { apiRanking } from "@/services/apiDatos";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica } from "../componentes";
+import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { claseVar } from "../estilos";
 import { fechaCorta, fmt, variacion } from "../datos";
 import { colorSerie } from "../opciones";
@@ -57,6 +57,33 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
       })),
     [respuesta]
   );
+  type FilaRanking = (typeof ranking)[number];
+  const archivo = useNombreDescarga("ranking");
+  const archivoResumen = useNombreDescarga("resumen");
+  const excelRanking: ColumnaExcel<FilaRanking>[] = [
+    { titulo: "Posición", valor: (r) => r.posicion, formato: "entero", ancho: 10 },
+    { titulo: "Entidad", valor: (r) => r.entidad, ancho: 40 },
+    { titulo: `${c.nombre} ${fechaCorta(ctx.anioAnterior)}`, valor: (r) => r.anterior, ancho: 18 },
+    { titulo: `Part. ${fechaCorta(ctx.anioAnterior)}`, valor: (r) => r.partAnterior, formato: "porcentaje", ancho: 14 },
+    { titulo: `${c.nombre} ${fechaCorta(ctx.fecha)}`, valor: (r) => r.actual, ancho: 18 },
+    { titulo: `Part. ${fechaCorta(ctx.fecha)}`, valor: (r) => r.partActual, formato: "porcentaje", ancho: 14 },
+  ];
+
+  const resumen = c.resumen
+    .filter((r) => ctx.fila(r.code))
+    .map((r) => {
+      const anterior = ctx.valor(r.code, ctx.anioAnterior);
+      const actual = ctx.valor(r.code);
+      return { ...r, anterior, actual, variacion: variacion(actual, anterior) };
+    });
+  type FilaResumen = (typeof resumen)[number];
+  const excelResumen: ColumnaExcel<FilaResumen>[] = [
+    { titulo: "Cuenta", valor: (r) => r.name, ancho: 28 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => r.anterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => r.actual, ancho: 14 },
+    { titulo: "Variación", valor: (r) => r.variacion, formato: "porcentaje", ancho: 12 },
+  ];
+
   const posicion = respuesta?.posicionEntidad ?? 0;
   const totales = respuesta?.total ?? { anterior: 0, actual: 0 };
 
@@ -115,35 +142,27 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
           </section>
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
             <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">RESUMEN DEL CUADRO</h4>
-            <table className="w-full text-detalle">
-              <thead>
-                <tr className="text-tinta-tenue">
-                  <th className="text-left">Cuenta</th>
-                  <th className="text-right">{fechaCorta(ctx.anioAnterior)}</th>
-                  <th className="text-right">{fechaCorta(ctx.fecha)}</th>
-                  <th className="text-right">Variación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.resumen
-                  .filter((r) => ctx.fila(r.code))
-                  .map((r) => {
-                    const a = ctx.valor(r.code, ctx.anioAnterior);
-                    const v = ctx.valor(r.code);
-                    const va = variacion(v, a);
-                    return (
-                      <tr key={r.code}>
-                        <td className="font-bold">{r.name}</td>
-                        <td className="text-right">{fmt(a)}</td>
-                        <td className="text-right font-bold">{fmt(v)}</td>
-                        <td className={`text-right ${claseVar(va)}`}>
-                          {va.toFixed(1)}% {va > 0 ? "▲" : va < 0 ? "▼" : "─"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
+            <TablaAnalitica<FilaResumen>
+              rowKey="code"
+              size="small"
+              pagination={false}
+              dataSource={resumen}
+              excel={{ nombre: archivoResumen, columnas: excelResumen }}
+              columns={[
+                { title: "Cuenta", render: (_, r) => <strong>{r.name}</strong> },
+                { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(r.anterior) },
+                { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(r.actual)}</strong> },
+                {
+                  title: "Variación",
+                  align: "right",
+                  render: (_, r) => (
+                    <span className={claseVar(r.variacion)}>
+                      {r.variacion.toFixed(1)}% {r.variacion > 0 ? "▲" : r.variacion < 0 ? "▼" : "─"}
+                    </span>
+                  ),
+                },
+              ]}
+            />
             <div className="mt-4 flex flex-col items-center rounded-tarjeta bg-identidad p-3 text-tinta-inversa">
               <span className="text-display font-extrabold">{isLoading ? "…" : posicion || "-"}</span>
               <span className="text-rotulo font-bold">POSICIÓN EN EL RANKING</span>
@@ -156,11 +175,12 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
             <Spin description="Cargando ranking..." size="large" />
           </div>
         ) : (
-          <TablaAnalitica
+          <TablaAnalitica<FilaRanking>
             rowKey="entidad"
             size="small"
             bordered
             pagination={false}
+            excel={{ nombre: archivo, columnas: excelRanking }}
             scroll={{ x: "max-content", y: 520 }}
             dataSource={ranking}
             rowClassName={claseFila}

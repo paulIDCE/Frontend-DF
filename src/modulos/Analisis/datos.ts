@@ -7,6 +7,8 @@
  * cuenta (`CUC`) y una columna por mes (`YYYY-MM`).
  */
 
+import { zoomTemporal } from "@idce/kit";
+
 export type FilaReporte = Record<string, unknown> & {
   CUC?: string;
   Variable?: string;
@@ -142,4 +144,16 @@ export const mesesDeAnios = (ctx: Ctx) => {
     actual: ctx.fechas.filter((d) => d.startsWith(`${anio}-`)),
     anterior: ctx.fechas.filter((d) => d.startsWith(`${anio - 1}-`)),
   };
+};
+
+/**
+ * Zoom de los historicos: los ultimos `visibles` meses que terminan en la fecha elegida (no en el
+ * ultimo dato). La tarjeta lo usa tambien como `zoomBase` para "Restablecer zoom".
+ */
+export const zoomRevista = (ctx: Ctx, visibles = 12) => {
+  if (!ctx.fechas.length) return zoomTemporal(0);
+  const corte = ctx.fechas.indexOf(ctx.fecha);
+  const fin = corte < 0 ? ctx.fechas.length - 1 : corte;
+  const inicio = Math.max(0, fin - visibles + 1);
+  return zoomTemporal({ desde: fechaLarga(ctx.fechas[inicio]), hasta: fechaLarga(ctx.fechas[fin]) });
 };

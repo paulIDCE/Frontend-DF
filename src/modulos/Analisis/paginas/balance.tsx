@@ -1,13 +1,25 @@
-import { useMemo } from "react";
-import { Checkbox, Spin } from "antd";
-import { FallOutlined, MinusOutlined, RiseOutlined } from "@ant-design/icons";
-import { TEXTO_GRAFICA, TablaAnalitica, inicioZoom, useService, zoomTemporal } from "@idce/kit";
+import { useMemo, useState, type ReactNode } from "react";
+import { Button, Checkbox, Spin } from "antd";
+import { AuditOutlined, BankOutlined, RiseOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
+import {
+  CLASE_COLUMNA_ACTIVA,
+  CeldaMoneda,
+  CeldaSaldoVariacion,
+  Delta,
+  FilaKpis,
+  KpiCard,
+  TEXTO_GRAFICA,
+  TablaAnalitica,
+  TituloAyuda,
+  useImpresion,
+  useService,
+  type ColumnaExcel,
+} from "@idce/kit";
 import { apiSeriesSistema } from "@/services/apiDatos";
 import { aFilasSistema } from "@/services/adaptadores";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica } from "../componentes";
-import { claseVar } from "../estilos";
-import { fechaCorta, fechaLarga, fmt, pct } from "../datos";
+import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
+import { fechaCorta, fechaLarga, fmt, zoomRevista, type Dato } from "../datos";
 import { colorSerie, opcionComparativoAnual } from "../opciones";
 
 /** Hojas 1 (Balance General) y 2 (Evolución Histórica). */
@@ -21,81 +33,122 @@ const PRINCIPALES = [
   { code: "Gan_Eje", name: "GANANCIAS", kpi: "Ganancias" },
 ];
 
-const Flecha = ({ v }: { v: number }) =>
-  v > 0 ? <RiseOutlined className="text-exito" /> : v < 0 ? <FallOutlined className="text-error" /> : <MinusOutlined className="text-tinta-deshabilitada" />;
+type FilaPrincipal = (typeof PRINCIPALES)[number] & { d: Dato | null };
 
+const ICONO_KPI: Record<string, ReactNode> = {
+  "@1": <BankOutlined />,
+  "@2": <AuditOutlined />,
+  "@3": <SafetyCertificateOutlined />,
+  Gan_Eje: <RiseOutlined />,
+};
+
+/** Variaciones de la revista (en %) a la fraccion que esperan las celdas del kit. */
+const fraccion = (v: number) => v / 100;
+
+/**
+ * Hoja 1 — Balance General. Arriba, los principales resultados como KPIs; debajo, la tabla de
+ * cuentas (saldo con variacion mensual y anual, `CeldaSaldoVariacion` del kit) enlazada con la
+ * grafica comparativa: clic en una cuenta y la grafica muestra su año actual contra el anterior.
+ * En el PDF no hay clic: salen las comparativas de Activo, Pasivo y Patrimonio.
+ */
 export const Hoja1 = () => {
   const { ctx, etiquetas } = useRevista();
-  const filas = PRINCIPALES.map((p) => ({ ...p, d: ctx.dato(p.code) })).filter((p) => p.d);
+  const impresion = useImpresion();
+  const nombre = useNombreDescarga();
+  const [activa, setActiva] = useState("@1");
+  const filas: FilaPrincipal[] = PRINCIPALES.map((p) => ({ ...p, d: ctx.dato(p.code) })).filter((p) => p.d);
+  const cuentaActiva = filas.find((f) => f.code === activa) ?? filas[0];
+
+  const excel: ColumnaExcel<FilaPrincipal>[] = [
+    { titulo: "Cuentas / Métricas", valor: (r) => r.name, ancho: 28 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => r.d!.anioAnterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.mesAnterior), valor: (r) => r.d!.mesAnterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => r.d!.actual, ancho: 14 },
+    { titulo: "Variación Mensual", valor: (r) => r.d!.varMensual, formato: "porcentaje", ancho: 14 },
+    { titulo: "Variación Anual", valor: (r) => r.d!.varAnual, formato: "porcentaje", ancho: 14 },
+  ];
+
+  const resaltar = (r: FilaPrincipal) => ({
+    className: !impresion && r.code === cuentaActiva?.code ? CLASE_COLUMNA_ACTIVA : "",
+  });
+
+  const grafica = (code: string, titulo: string) => (
+    <Grafica key={code} titulo={titulo} option={opcionComparativoAnual(ctx, code, etiquetas)} alto={impresion ? 260 : 340} />
+  );
 
   return (
     <>
       <CabeceraPagina
         titulo="PANEL DE ANÁLISIS: PRINCIPALES CUENTAS DEL BALANCE GENERAL"
-        subtitulo="Análisis Comparativo del Activo, Pasivo y Patrimonio"
+        subtitulo={`Análisis comparativo del Activo, Pasivo y Patrimonio · cifras en millones USD a ${fechaLarga(ctx.fecha)}`}
       />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <section className="rounded-contenedor bg-identidad p-4 text-tinta-inversa">
-          <h3 className="m-0 mb-3 text-subtitulo font-bold">Principales resultados</h3>
-          <div className="flex flex-col gap-3">
-            {filas
-              .filter((f) => f.kpi)
-              .map((f) => (
-                <div key={f.code} className="rounded-tarjeta bg-superficie p-3 text-tinta">
-                  <div className="text-rotulo font-bold uppercase text-tinta-secundaria">{f.kpi}</div>
-                  <div className="text-cifra font-extrabold text-identidad">{fmt(f.d!.actual)}</div>
-                  <div className={`text-detalle font-semibold ${claseVar(f.d!.varAnual)}`}>
-                    {f.d!.varAnual >= 0 ? "+" : ""}
-                    {pct(f.d!.varAnual)}
-                  </div>
-                </div>
-              ))}
-          </div>
+
+      <FilaKpis columnas={4}>
+        {filas
+          .filter((f) => f.kpi)
+          .map((f) => (
+            <KpiCard
+              key={f.code}
+              titulo={f.kpi}
+              icono={ICONO_KPI[f.code]}
+              color={f.code === "Gan_Eje" ? (f.d!.actual >= 0 ? "bueno" : "malo") : f.code === "@3" ? "accion" : "monto"}
+              valor={fmt(f.d!.actual)}
+              sufijo="M USD"
+              valorSecundario={<Delta valor={f.d!.varAnual} sufijo="%" etiqueta={`vs. ${fechaCorta(ctx.anioAnterior)}`} />}
+              pie={<Delta valor={f.d!.varMensual} sufijo="%" etiqueta={`vs. ${fechaCorta(ctx.mesAnterior)}`} />}
+            />
+          ))}
+      </FilaKpis>
+
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+        <section className="flex min-w-0 flex-col gap-2">
+          <h3 className="m-0 text-cuerpo font-bold text-identidad">Cuentas principales</h3>
+          {!impresion && (
+            <p className="m-0 text-rotulo text-tinta-tenue">Haz clic en una cuenta para ver su comparativo anual.</p>
+          )}
+          <TablaAnalitica<FilaPrincipal>
+            rowKey="code"
+            pagination={false}
+            dataSource={filas}
+            excel={{ nombre, columnas: excel }}
+            onRow={(r) => ({ onClick: () => setActiva(r.code), className: impresion ? "" : "cursor-pointer" })}
+            columns={[
+              {
+                title: "Cuenta",
+                dataIndex: "name",
+                onCell: resaltar,
+                render: (v: string, r) => (
+                  <span className={`font-semibold ${r.code === cuentaActiva?.code && !impresion ? "text-accion" : "text-identidad"}`}>
+                    {v}
+                  </span>
+                ),
+              },
+              { title: fechaCorta(ctx.anioAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaMoneda valor={r.d!.anioAnterior} /> },
+              { title: fechaCorta(ctx.mesAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaMoneda valor={r.d!.mesAnterior} /> },
+              {
+                title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Saldo del corte con su variación mensual (M) y anual (A)" />,
+                align: "right",
+                onCell: resaltar,
+                render: (_, r) => (
+                  <CeldaSaldoVariacion valor={r.d!.actual} mensual={fraccion(r.d!.varMensual)} anual={fraccion(r.d!.varAnual)} />
+                ),
+              },
+            ]}
+          />
         </section>
-        <TablaAnalitica
-          rowKey="code"
-          pagination={false}
-          bordered
-          dataSource={filas}
-          columns={[
-            { title: "Cuentas / Métricas", dataIndex: "name", render: (v) => <strong>{v}</strong> },
-            { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(r.d!.anioAnterior) },
-            { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(r.d!.mesAnterior) },
-            {
-              title: fechaCorta(ctx.fecha),
-              align: "right",
-              render: (_, r) => <strong className="text-identidad">{fmt(r.d!.actual)}</strong>,
-            },
-            {
-              title: "Variación Mensual",
-              align: "right",
-              render: (_, r) => (
-                <span className="flex items-center justify-end gap-1">
-                  {pct(r.d!.varMensual)} <Flecha v={r.d!.varMensual} />
-                </span>
-              ),
-            },
-            {
-              title: "Variación Anual",
-              align: "right",
-              render: (_, r) => (
-                <span className="flex items-center justify-end gap-1">
-                  {pct(r.d!.varAnual)} <Flecha v={r.d!.varAnual} />
-                </span>
-              ),
-            },
-          ]}
-        />
+
+        {impresion ? null : (
+          cuentaActiva && grafica(cuentaActiva.code, `Comparativo anual · ${cuentaActiva.name}`)
+        )}
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
-        {[
-          ["@1", "Análisis Comparativo del Activo"],
-          ["@2", "Análisis Comparativo del Pasivo"],
-          ["@3", "Análisis Comparativo del Patrimonio"],
-        ].map(([code, titulo]) => (
-          <Grafica key={code} titulo={titulo} option={opcionComparativoAnual(ctx, code, etiquetas)} alto={300} />
-        ))}
-      </div>
+
+      {impresion && (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {grafica("@1", "Comparativo anual del Activo")}
+          {grafica("@2", "Comparativo anual del Pasivo")}
+          {grafica("@3", "Comparativo anual del Patrimonio")}
+        </div>
+      )}
     </>
   );
 };
@@ -142,7 +195,7 @@ export const Hoja2 = () => {
         axisLabel: { ...TEXTO_GRAFICA, rotate: 45 },
       },
       yAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
-      dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, 12)),
+      dataZoom: zoomRevista(ctx, 12),
       series: series.map((s, i) => ({
         ...s,
         type: "line",
@@ -166,6 +219,14 @@ export const Hoja2 = () => {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="rounded-tarjeta border border-linea bg-superficie p-3">
           <h3 className="m-0 mb-2 text-cuerpo font-bold text-identidad">Series a graficar:</h3>
+          <div className="mb-2 flex flex-wrap gap-2 print:hidden">
+            <Button size="small" onClick={() => setSectores(sectores)} disabled={!sectores.length || marcados.length === sectores.length}>
+              Seleccionar todo
+            </Button>
+            <Button size="small" onClick={() => setSectores([])} disabled={!marcados.length}>
+              Deseleccionar todo
+            </Button>
+          </div>
           {isLoading ? (
             <Spin />
           ) : (

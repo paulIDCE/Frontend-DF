@@ -5,6 +5,8 @@ import type { Ctx } from "./datos";
 export interface RevistaValor {
   ctx: Ctx;
   entidad: string;
+  /** Nombre de la hoja que se ve (para nombrar las descargas). */
+  hoja: string;
   /** "Mostrar valores en gráficos" (interruptor de la barra de la revista). */
   etiquetas: boolean;
   tamano: string;

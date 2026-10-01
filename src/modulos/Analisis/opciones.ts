@@ -1,6 +1,6 @@
-import { TEXTO_GRAFICA, color, conAlfa, inicioZoom, zoomTemporal } from "@idce/kit";
+import { TEXTO_GRAFICA, color, conAlfa } from "@idce/kit";
 import type { Ctx } from "./datos";
-import { MESES, fechaCorta, fechaLarga, fmt, mesesDeAnios } from "./datos";
+import { MESES, fechaCorta, fechaLarga, fmt, mesesDeAnios, zoomRevista } from "./datos";
 
 /**
  * Constructores de opciones ECharts de la revista — porte de
@@ -128,7 +128,7 @@ export const opcionHistorico = (
       axisTick: { show: false },
     },
     yAxis: hayDerecha ? [ejeValor(izq), { ...ejeValor(der), splitLine: { show: false } }] : ejeValor(izq),
-    dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, visibles)),
+    dataZoom: zoomRevista(ctx, visibles),
     series: series.map((s, i) => {
       const tipo = s.type ?? "line";
       return {

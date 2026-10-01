@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import { Button, Select, Spin, Switch, Tooltip } from "antd";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Button, Dropdown, Select, Spin, Switch, Tooltip } from "antd";
 import {
   ArrowLeftOutlined,
   DoubleLeftOutlined,
   DoubleRightOutlined,
+  DownOutlined,
+  FileOutlined,
   FilePdfOutlined,
+  FileTextOutlined,
   LeftOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { EstadoError, LimiteError, useService } from "@idce/kit";
+import { EstadoError, ImpresionContext, LimiteError, useService } from "@idce/kit";
 import { RevistaContext, type RevistaValor } from "./RevistaContext";
 import { MESES, crearCtx, fechasDe } from "./datos";
 import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
@@ -17,9 +21,37 @@ import { HOJAS } from "./paginas";
 /**
  * Revista digital de 31 hojas — porte de `#digital-magazine-view` de
  * prueba-data. Solo se monta la hoja activa (el original renderizaba las 31
- * en cada cambio de fecha); "Descargar PDF" monta todas y llama a
- * `window.print()`.
+ * en cada cambio de fecha).
+ *
+ * "Descargar PDF" (todo o la pagina actual) es HTML -> PDF con `window.print()`,
+ * no una captura: las hojas se montan en modo impresion (`ImpresionContext`)
+ * en un contenedor aparte con el ancho util de una A4 apaisada, de modo que las
+ * graficas (SVG) y las tablas (sin scroll) salen completas, cada hoja empieza
+ * en pagina nueva y el texto queda seleccionable.
  */
+
+type Impresion = "todo" | "actual";
+
+/** Ancho util de A4 apaisada con margenes de 10 mm (277 mm a 96 ppp). */
+const ANCHO_IMPRESION = 1046;
+
+/**
+ * Espera a que las hojas terminen de cargar (las que piden datos propios muestran un `Spin`) y a
+ * que se pinten: listo cuando no hay indicadores girando en dos comprobaciones seguidas.
+ */
+const esperarHojas = (contenedor: HTMLElement, cancelado: () => boolean): Promise<void> =>
+  new Promise((listo) => {
+    const inicio = Date.now();
+    let quietas = 0;
+    const comprobar = () => {
+      if (cancelado()) return;
+      const girando = contenedor.querySelector(".ant-spin-spinning, .ant-skeleton-active");
+      quietas = girando ? 0 : quietas + 1;
+      if ((quietas >= 2 && Date.now() - inicio > 800) || Date.now() - inicio > 30000) listo();
+      else setTimeout(comprobar, 300);
+    };
+    setTimeout(comprobar, 300);
+  });
 
 interface Props {
   entidad: string;
@@ -41,19 +73,35 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
 
   const [etiquetas, setEtiquetas] = useState(true);
   const [sectores, setSectores] = useState<string[]>([]);
-  const [imprimiendo, setImprimiendo] = useState(false);
+  const [imprimiendo, setImprimiendo] = useState<Impresion | null>(null);
+  const contenedorImpresion = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!imprimiendo) return;
-    const fin = () => setImprimiendo(false);
+    let cancelado = false;
+    const tituloAnterior = document.title;
+    const fin = () => {
+      document.title = tituloAnterior;
+      setImprimiendo(null);
+    };
     window.addEventListener("afterprint", fin);
-    // Deja que ECharts pinte las 31 hojas antes de abrir el dialogo.
-    const t = setTimeout(() => window.print(), 1500);
+    const contenedor = contenedorImpresion.current;
+    if (contenedor)
+      esperarHojas(contenedor, () => cancelado).then(() => {
+        if (cancelado) return;
+        // El titulo es el nombre que propone el navegador para el PDF.
+        document.title = ["Analisis", entidad, fecha, imprimiendo === "actual" ? `hoja_${pagina}` : ""]
+          .filter(Boolean)
+          .join("_")
+          .replace(/[^\w-]+/g, "_");
+        window.print();
+      });
     return () => {
-      clearTimeout(t);
+      cancelado = true;
+      document.title = tituloAnterior;
       window.removeEventListener("afterprint", fin);
     };
-  }, [imprimiendo]);
+  }, [imprimiendo, entidad, fecha, pagina]);
 
   const valor = useMemo<RevistaValor | null>(() => {
     if (!filas?.length || !fecha) return null;
@@ -61,6 +109,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
     return {
       ctx: crearCtx(filas, fecha),
       entidad,
+      hoja: HOJAS[pagina - 1]?.nombre ?? "",
       etiquetas,
       tamano: info.tamano,
       rango: info.rango,
@@ -69,7 +118,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
       sectores,
       setSectores,
     };
-  }, [filas, fecha, entidad, etiquetas, onEntidad, sectores]);
+  }, [filas, fecha, entidad, pagina, etiquetas, onEntidad, sectores]);
 
   const total = HOJAS.length;
   const ir = (n: number) => onPagina(Math.min(total, Math.max(1, n)));
@@ -83,9 +132,20 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
         <Button icon={<ArrowLeftOutlined />} onClick={onVolver}>
           Volver al Hub
         </Button>
-        <Button danger icon={<FilePdfOutlined />} onClick={() => setImprimiendo(true)} disabled={!valor}>
-          Descargar PDF
-        </Button>
+        <Dropdown
+          disabled={!valor || !!imprimiendo}
+          menu={{
+            items: [
+              { key: "todo", icon: <FileTextOutlined />, label: `Descargar todo (${HOJAS.length} hojas)` },
+              { key: "actual", icon: <FileOutlined />, label: `Descargar página actual (${pagina})` },
+            ],
+            onClick: ({ key }) => setImprimiendo(key as Impresion),
+          }}
+        >
+          <Button danger icon={<FilePdfOutlined />} loading={!!imprimiendo}>
+            {imprimiendo ? "Preparando PDF…" : "Descargar PDF"} <DownOutlined />
+          </Button>
+        </Dropdown>
         <label className="flex items-center gap-2 text-detalle text-tinta-secundaria">
           <Switch size="small" checked={etiquetas} onChange={setEtiquetas} />
           📊 Mostrar valores en gráficos
@@ -182,21 +242,35 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
         </div>
       ) : (
         <RevistaContext.Provider value={valor}>
-          {imprimiendo ? (
-            HOJAS.map((h) => (
-              <article key={h.numero} className="break-after-page rounded-contenedor bg-superficie p-5">
-                <LimiteError>
-                  <h.Componente />
-                </LimiteError>
-              </article>
-            ))
-          ) : (
-            <article className="rounded-contenedor bg-superficie p-5 shadow-tarjeta">
-              <LimiteError key={`${pagina}-${entidad}`}>
-                <hoja.Componente />
-              </LimiteError>
-            </article>
-          )}
+          <article className="rounded-contenedor bg-superficie p-5 shadow-tarjeta">
+            <LimiteError key={`${pagina}-${entidad}`}>
+              <hoja.Componente />
+            </LimiteError>
+          </article>
+          {/* Copia para imprimir: fuera de pantalla mientras se prepara; al imprimir es lo unico
+              que se ve (`index.css`). Portal en `body` para no heredar el ancho del layout. */}
+          {imprimiendo &&
+            createPortal(
+              <div
+                id="revista-impresion"
+                ref={contenedorImpresion}
+                style={{ width: ANCHO_IMPRESION }}
+                aria-hidden
+              >
+                <ImpresionContext.Provider value>
+                  {(imprimiendo === "todo" ? HOJAS : [hoja]).map((h) => (
+                    <RevistaContext.Provider key={h.numero} value={{ ...valor, hoja: h.nombre }}>
+                      <article className="hoja-impresion">
+                        <LimiteError>
+                          <h.Componente />
+                        </LimiteError>
+                      </article>
+                    </RevistaContext.Provider>
+                  ))}
+                </ImpresionContext.Provider>
+              </div>,
+              document.body
+            )}
         </RevistaContext.Provider>
       )}
     </div>

@@ -1,14 +1,33 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Checkbox, Radio, Select, Spin, Tabs } from "antd";
-import { TEXTO_GRAFICA, TablaAnalitica, color, conAlfa, inicioZoom, showToast, useService, zoomTemporal } from "@idce/kit";
+import { Checkbox, Segmented, Select, Spin, Tabs } from "antd";
+import {
+  FranjaSelectores,
+  TEXTO_GRAFICA,
+  TablaAnalitica,
+  TabsAnaliticas,
+  arbolPorNivel,
+  color,
+  conAlfa,
+  showToast,
+  useImpresion,
+  useService,
+  type ColumnaExcel,
+} from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica } from "../componentes";
+import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { claseVar } from "../estilos";
-import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte } from "../datos";
+import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista } from "../datos";
 import { colorSerie, opcionHistorico } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
+import {
+  NAVEGACION_27,
+  NAVEGACION_29,
+  NAVEGACION_30,
+  NAVEGACION_31,
+  type NavegacionIndicadores,
+} from "./navegacionIndicadores";
 
 /**
  * Hojas 27 (Indicadores Financieros), 28 (CAMELS - PERLAS), 29 (Evolución
@@ -61,7 +80,7 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
     grid: { left: 8, right: 16, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), boundaryGap: false, axisLabel: { ...TEXTO_GRAFICA, rotate: 45 } },
     yAxis: { type: "value", name: "Tasa (%)", scale: true, nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
-    dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, 12)),
+    dataZoom: zoomRevista(ctx, 12),
     series: [
       ...banda("2SD_superior", "2SD_inferior", "Banda ±2SD", 0.2, 1),
       ...banda("1SD_superior", "1SD_inferior", "Banda ±1SD", 0.35, 3),
@@ -104,67 +123,133 @@ const opcionIndicador = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean, { ad
   };
 };
 
+/** Rejilla de graficas de una categoria. */
+const GraficasCategoria = ({ cat, extra, alto }: { cat: CategoriaIndicadores; extra?: ExtraSeries; alto: number }) => {
+  const { ctx, etiquetas } = useRevista();
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {cat.graficos.map((g, i) => (
+        <Grafica
+          key={`${cat.key}-${i}`}
+          titulo={g.titulo}
+          option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
+          alto={alto}
+          cambioTipo={!g.volatilidad}
+        />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Categorias de indicadores en dos niveles, con las piezas que el kit pide para esto
+ * (`docs/VISTAS_ANALITICAS.md`): el grupo en un `Segmented` rotulado (`FranjaSelectores`) y la
+ * categoria en `TabsAnaliticas` ("contenidos distintos, uno a la vez"). Reemplaza la tira de hasta
+ * 11 botones en mayusculas del original. En el PDF salen todas las categorias, cada una con su titulo.
+ */
 const RejillaIndicadores = ({
   categorias,
+  navegacion,
   extra,
   alto = 280,
   lateral,
 }: {
   categorias: CategoriaIndicadores[];
+  navegacion: NavegacionIndicadores;
   extra?: ExtraSeries;
   alto?: number;
   lateral?: ReactNode;
 }) => {
-  const { ctx, etiquetas } = useRevista();
-  const [activa, setActiva] = useState(categorias[0].key);
-  const cat = categorias.find((c) => c.key === activa) ?? categorias[0];
-  return (
-    <>
-      <Radio.Group
-        value={activa}
-        onChange={(e) => setActiva(e.target.value)}
-        optionType="button"
-        buttonStyle="solid"
-        size="small"
-        className="mb-3 flex flex-wrap gap-1"
-        options={categorias.map((c) => ({ value: c.key, label: c.etiqueta }))}
+  const impresion = useImpresion();
+  const porKey = useMemo(() => new Map(categorias.map((c) => [c.key, c])), [categorias]);
+  // Solo los items con categoria en la configuracion (y los grupos que queden con alguno).
+  const grupos = useMemo(
+    () =>
+      navegacion.grupos
+        .map((g) => ({ ...g, items: g.items.filter((i) => porKey.has(i.key)) }))
+        .filter((g) => g.items.length > 0),
+    [navegacion, porKey],
+  );
+  const [grupoKey, setGrupoKey] = useState(grupos[0]?.key);
+  const grupo = grupos.find((g) => g.key === grupoKey) ?? grupos[0];
+  const [elegidas, setElegidas] = useState<Record<string, string>>({});
+  const activa = elegidas[grupo?.key ?? ""] ?? grupo?.items[0]?.key;
+
+  if (!grupo) return null;
+
+  const contenido = impresion ? (
+    <div className="flex flex-col gap-4">
+      {grupos.flatMap((g) =>
+        g.items.map((item) => (
+          <section key={`${g.key}-${item.key}`} className="flex flex-col gap-2">
+            <h3 className="m-0 text-cuerpo font-bold text-identidad">
+              {grupos.length > 1 ? `${g.titulo} · ` : ""}
+              {item.titulo}
+            </h3>
+            <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />
+          </section>
+        )),
+      )}
+    </div>
+  ) : (
+    <div className="flex min-w-0 flex-col gap-2">
+      {grupos.length > 1 && (
+        <FranjaSelectores
+          grupos={[
+            {
+              rotulo: navegacion.rotulo,
+              control: (
+                <Segmented
+                  value={grupo.key}
+                  onChange={(v) => setGrupoKey(String(v))}
+                  options={grupos.map((g) => ({ value: g.key, label: `${g.titulo} (${g.items.length})` }))}
+                />
+              ),
+            },
+          ]}
+        />
+      )}
+      <TabsAnaliticas
+        key={grupo.key}
+        activa={activa}
+        onCambiar={(k) => setElegidas((e) => ({ ...e, [grupo.key]: k }))}
+        pestanas={grupo.items.map((item) => ({
+          key: item.key,
+          titulo: item.titulo,
+          contenido: <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />,
+        }))}
       />
-      <div className={lateral ? "grid grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]" : ""}>
-        {lateral}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {cat.graficos.map((g, i) => (
-            <Grafica
-              key={`${cat.key}-${i}`}
-              titulo={g.titulo}
-              option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
-              alto={alto}
-              cambioTipo={!g.volatilidad}
-            />
-          ))}
-        </div>
-      </div>
-    </>
+    </div>
+  );
+
+  return lateral ? (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+      {lateral}
+      {contenido}
+    </div>
+  ) : (
+    contenido
   );
 };
 
 export const Hoja27 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS" subtitulo="Métricas clave de desempeño financiero" />
-    <RejillaIndicadores categorias={INDICADORES_27} />
+    <RejillaIndicadores categorias={INDICADORES_27} navegacion={NAVEGACION_27} />
   </>
 );
 
 export const Hoja29 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS CAMELS - PERLAS" subtitulo="Evolución del desempeño financiero" />
-    <RejillaIndicadores categorias={INDICADORES_29} />
+    <RejillaIndicadores categorias={INDICADORES_29} navegacion={NAVEGACION_29} />
   </>
 );
 
 export const Hoja30 = () => (
   <>
-    <CabeceraPagina titulo="TASAS DE INTERÉS ACTIVAS Y PASIVAS" subtitulo="Evolución de las tasas de interes activas y pasivas" />
-    <RejillaIndicadores categorias={INDICADORES_30} alto={340} />
+    <CabeceraPagina titulo="TASAS DE INTERÉS ACTIVAS Y PASIVAS" subtitulo="Evolución de las tasas de interés activas y pasivas" />
+    <RejillaIndicadores categorias={INDICADORES_30} navegacion={NAVEGACION_30} alto={340} />
   </>
 );
 
@@ -244,30 +329,56 @@ const PERLAS: Indicador[] = [
   ["efic_perlas_acum", "EFICIENCIA GLOBAL EN PERLAS", "-", 1],
 ];
 
-/** Tabla de indicadores: variaciones en puntos porcentuales (`renderTablaIndicadoresGenerico`). */
-const TablaIndicadores = ({ filas }: { filas: Indicador[] }) => {
+type FilaIndicador = { code: string; nombre: string; meta: string; nivel: 1 | 2 };
+
+/**
+ * Tabla de indicadores: variaciones en puntos porcentuales (`renderTablaIndicadoresGenerico`). Los
+ * indicadores de nivel 2 cuelgan del componente (nivel 1) anterior: arbol con expandir / contraer.
+ */
+const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: string }) => {
   const { ctx } = useRevista();
-  const datos = filas.filter(([code]) => ctx.fila(code));
+  const archivo = useNombreDescarga(nombre);
+  const datos = useMemo(
+    () =>
+      arbolPorNivel<FilaIndicador>(
+        filas.filter(([code]) => ctx.fila(code)).map(([code, n, meta, nivel]) => ({ code, nombre: n, meta, nivel })),
+        (r) => r.nivel,
+      ),
+    [filas, ctx],
+  );
+  const vm = (r: FilaIndicador) => ctx.valor(r.code) - ctx.valor(r.code, ctx.mesAnterior);
+  const va = (r: FilaIndicador) => ctx.valor(r.code) - ctx.valor(r.code, ctx.anioAnterior);
+  const excel: ColumnaExcel<FilaIndicador>[] = [
+    { titulo: "Indicador", valor: (r) => r.nombre, ancho: 48 },
+    { titulo: "Meta", valor: (r) => r.meta, ancho: 18 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => ctx.valor(r.code, ctx.anioAnterior), ancho: 14 },
+    { titulo: fechaCorta(ctx.mesAnterior), valor: (r) => ctx.valor(r.code, ctx.mesAnterior), ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => ctx.valor(r.code), ancho: 14 },
+    { titulo: "Var. Mensual (pp)", valor: vm, ancho: 14 },
+    { titulo: "Var. Anual (pp)", valor: va, ancho: 14 },
+  ];
   const pp = (v: number) => (
     <span className={claseVar(v)}>
       {v.toFixed(2)} pp {v > 0 ? "▲" : v < 0 ? "▼" : "─"}
     </span>
   );
   return (
-    <TablaAnalitica
-      rowKey={(r) => r[0]}
+    <TablaAnalitica<FilaIndicador>
+      rowKey="code"
       dataSource={datos}
       pagination={false}
       bordered
+      arbol="expandido"
+      excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content", y: 460 }}
       columns={[
-        { title: "Indicador", render: (_, r) => <span className={r[3] === 1 ? "font-bold text-identidad" : "pl-3"}>{r[1]}</span> },
-        { title: "Meta", render: (_, r) => r[2] },
-        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r[0], ctx.anioAnterior)) },
-        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r[0], ctx.mesAnterior)) },
-        { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(ctx.valor(r[0]))}</strong> },
-        { title: "Var. Mensual", align: "right", render: (_, r) => pp(ctx.valor(r[0]) - ctx.valor(r[0], ctx.mesAnterior)) },
-        { title: "Var. Anual", align: "right", render: (_, r) => pp(ctx.valor(r[0]) - ctx.valor(r[0], ctx.anioAnterior)) },
+        { title: "Indicador", render: (_, r) => <span className={r.nivel === 1 ? "font-bold text-identidad" : ""}>{r.nombre}</span> },
+        { title: "Meta", render: (_, r) => r.meta },
+        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.anioAnterior)) },
+        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.mesAnterior)) },
+        { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(ctx.valor(r.code))}</strong> },
+        { title: "Var. Mensual", align: "right", render: (_, r) => pp(vm(r)) },
+        { title: "Var. Anual", align: "right", render: (_, r) => pp(va(r)) },
       ]}
     />
   );
@@ -345,7 +456,7 @@ export const Hoja28 = () => {
                     alto={300}
                   />
                 </div>
-                <TablaIndicadores filas={CAMELS} />
+                <TablaIndicadores filas={CAMELS} nombre="CAMELS" />
               </div>
             ),
           },
@@ -372,7 +483,7 @@ export const Hoja28 = () => {
                     alto={300}
                   />
                 </div>
-                <TablaIndicadores filas={PERLAS} />
+                <TablaIndicadores filas={PERLAS} nombre="PERLAS" />
               </div>
             ),
           },
@@ -481,7 +592,7 @@ export const Hoja31 = () => {
   return (
     <>
       <CabeceraPagina titulo="COMPARATIVO CON OTRAS ENTIDADES FINANCIERAS" subtitulo="Análisis comparativo de indicadores clave" />
-      <RejillaIndicadores categorias={INDICADORES_31} extra={{ adicionales }} lateral={lateral} />
+      <RejillaIndicadores categorias={INDICADORES_31} navegacion={NAVEGACION_31} extra={{ adicionales }} lateral={lateral} />
     </>
   );
 };

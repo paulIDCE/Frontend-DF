@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { MiniGrafica, TablaAnalitica, TarjetaGrafica } from "@idce/kit";
+import { useMemo, type ReactNode } from "react";
+import { MiniGrafica, TablaAnalitica, TarjetaGrafica, arbolPorNivel, type ColumnaExcel, type VentanaEje } from "@idce/kit";
 import {
   BarChartOutlined,
   BulbOutlined,
@@ -55,21 +55,52 @@ export const KpiBox = ({ titulo, code, sufijo = "" }: { titulo: string; code: st
   );
 };
 
+/** Nombre de archivo de las descargas de la hoja: `<hoja>_<entidad>_<fecha>`. */
+export const useNombreDescarga = (detalle?: string) => {
+  const { hoja, entidad, ctx } = useRevista();
+  return [hoja, detalle, entidad, ctx.fecha]
+    .filter(Boolean)
+    .join("_")
+    .replace(/[\\/:*?"<>|.]+/g, "")
+    .replace(/\s+/g, "_");
+};
+
 export interface CuentaTabla {
   code: string;
   name: string;
   nivel?: number;
 }
 
-/** Tabla "Cuentas/Meses" con los tres cortes y variaciones (`renderTablaEstructuraGenerico`). */
+type FilaEstructura = CuentaTabla & { key: string; d: Dato };
+
+/**
+ * Tabla "Cuentas/Meses" con los tres cortes y variaciones (`renderTablaEstructuraGenerico`). Las
+ * cuentas de nivel 2 y 3 cuelgan de la anterior de nivel menor: arbol con expandir / contraer todo.
+ */
 export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alto?: number }) => {
   const { ctx } = useRevista();
-  const filas = cuentas
-    .map((c, i) => {
-      const d = ctx.dato(c.code);
-      return d ? { key: `${c.code}-${i}`, ...c, d } : null;
-    })
-    .filter(Boolean) as (CuentaTabla & { key: string; d: Dato })[];
+  const nombre = useNombreDescarga();
+  const filas = useMemo(
+    () =>
+      arbolPorNivel(
+        cuentas
+          .map((c, i) => {
+            const d = ctx.dato(c.code);
+            return d ? { key: `${c.code}-${i}`, ...c, d } : null;
+          })
+          .filter(Boolean) as FilaEstructura[],
+        (r) => r.nivel ?? 1,
+      ),
+    [cuentas, ctx],
+  );
+  const excel: ColumnaExcel<FilaEstructura>[] = [
+    { titulo: "Cuentas/Meses", valor: (r) => r.name, ancho: 48 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => r.d.anioAnterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.mesAnterior), valor: (r) => r.d.mesAnterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => r.d.actual, ancho: 14 },
+    { titulo: "Variación Mensual", valor: (r) => r.d.varMensual, formato: "porcentaje", ancho: 14 },
+    { titulo: "Variación Anual", valor: (r) => r.d.varAnual, formato: "porcentaje", ancho: 14 },
+  ];
 
   const celdaVar = (v: number) => (
     <span className={claseVar(v)}>
@@ -78,11 +109,14 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
   );
 
   return (
-    <TablaAnalitica
+    <TablaAnalitica<FilaEstructura>
       rowKey="key"
       dataSource={filas}
       pagination={false}
       bordered
+      arbol="expandido"
+      indentSize={14}
+      excel={{ nombre, columnas: excel }}
       scroll={alto ? { x: "max-content", y: alto } : { x: "max-content" }}
       columns={[
         {
@@ -91,7 +125,6 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
           render: (_, r) => (
             <span
               className={r.nivel === 1 || !r.nivel ? "font-bold text-identidad" : r.nivel === 3 ? "text-tinta-secundaria" : "font-medium"}
-              style={{ paddingLeft: ((r.nivel ?? 1) - 1) * 14 }}
             >
               {r.name}
             </span>
@@ -107,8 +140,30 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
   );
 };
 
-/** Grafica de la revista: `TarjetaGrafica` con cambio lineas/barras. */
-export const Grafica = ({
+/** Ventana inicial del `dataZoom` de la opcion (la de `zoomRevista`): vuelve a ella "Restablecer zoom". */
+const ventanaDeOpcion = (option: unknown): VentanaEje | undefined => {
+  const zoom = (option as { dataZoom?: { startValue?: string | number; endValue?: string | number }[] } | null)?.dataZoom?.[0];
+  return zoom?.startValue !== undefined && zoom.endValue !== undefined
+    ? { desde: zoom.startValue, hasta: zoom.endValue }
+    : undefined;
+};
+
+/**
+ * Grafica de la revista: `TarjetaGrafica` con cambio lineas/barras. El interruptor "Mostrar valores"
+ * de la revista da el estado inicial de las etiquetas; cada grafica puede alternarlas.
+ */
+export const Grafica = (props: {
+  titulo: ReactNode;
+  option: unknown;
+  alto?: number;
+  cambioTipo?: boolean;
+  estadisticas?: boolean;
+}) => {
+  const { etiquetas } = useRevista();
+  return <GraficaRevista key={String(etiquetas)} {...props} />;
+};
+
+const GraficaRevista = ({
   titulo,
   option,
   alto = 300,
@@ -127,6 +182,7 @@ export const Grafica = ({
     alto={alto}
     cambioTipo={cambioTipo}
     estadisticas={estadisticas}
+    zoomBase={ventanaDeOpcion(option)}
     nombreImagen={typeof titulo === "string" ? titulo : "grafico"}
   />
 );

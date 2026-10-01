@@ -23,3 +23,66 @@
 :root {
   --densidad-ui: 1;
 }
+
+/* ============================================
+   PDF de la revista de Analisis (window.print)
+   ============================================
+   `#revista-impresion` (portal en body, ver modulos/Analisis/Revista.tsx) se
+   monta fuera de pantalla con el ancho util de la pagina; al imprimir es lo
+   unico visible. Cada hoja empieza en pagina nueva; graficas y filas no se
+   parten y la cabecera de las tablas se repite si una tabla cruza de pagina. */
+#revista-impresion {
+  position: absolute;
+  top: 0;
+  left: -20000px;
+  background: var(--color-superficie);
+}
+
+#revista-impresion .hoja-impresion {
+  padding: 0 4px;
+}
+
+@page {
+  size: A4 landscape;
+  margin: 10mm;
+}
+
+@media print {
+  body > *:not(#revista-impresion) {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  #revista-impresion {
+    position: static;
+    left: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #revista-impresion .hoja-impresion {
+    break-after: page;
+  }
+
+  #revista-impresion .hoja-impresion:last-child {
+    break-after: auto;
+  }
+
+  #revista-impresion * {
+    box-shadow: none !important;
+  }
+
+  #revista-impresion thead {
+    display: table-header-group;
+  }
+
+  #revista-impresion tr,
+  #revista-impresion section,
+  #revista-impresion header {
+    break-inside: avoid;
+  }
+}

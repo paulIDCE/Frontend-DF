@@ -20,6 +20,8 @@ import { color, tipografia } from "@/design/tokens";
 import { admiteSeleccionRango, conSeleccionRango, useSeleccionRango } from "./useSeleccionRango";
 import type { EjesZoom, SeleccionRango, VentanaZoom } from "./useSeleccionRango";
 import ControlesPeriodo from "./ControlesPeriodo";
+import { conEtiquetas, type VentanaEje } from "./opcionesBase";
+import { useImpresion } from "../impresion";
 
 // CommonJS: en Node (Vitest) el `default` llega envuelto. Ver `interopDefault`.
 const ReactECharts = interopDefault(ReactEChartsModulo);
@@ -84,19 +86,76 @@ const conTipo = (option: OpcionBasica, tipo: TipoSerie): OpcionBasica => ({
 const tieneDataZoom = (option: OpcionBasica | null) =>
   Array.isArray(option?.dataZoom) ? option.dataZoom.length > 0 : !!option?.dataZoom;
 
+type SerieConEtiqueta = SerieBasica & { label?: Record<string, unknown> };
+
+/** ¿La opción trae las etiquetas encendidas? (la primera serie con `label` manda). */
+const etiquetasDeOpcion = (option: OpcionBasica | null): boolean =>
+  !!((option?.series ?? []) as SerieConEtiqueta[]).find((s) => s.label)?.label?.show;
+
+type ZoomBasico = Record<string, unknown> & { id?: string };
+/** `dataZoom` del eje X que maneja la vista (los del modo zoom por selección van aparte). */
+const esZoomDeVista = (z: ZoomBasico) => !String(z.id ?? "").startsWith("idce-zoom");
+const listaZoom = (option: OpcionBasica): ZoomBasico[] =>
+  Array.isArray(option.dataZoom) ? option.dataZoom : option.dataZoom ? [option.dataZoom as ZoomBasico] : [];
+
+/** Pone la ventana (valores del eje X) en los `dataZoom` de la vista; `null` = todo (0–100 %). */
+const conVentana = (option: OpcionBasica, ventana: VentanaEje | null): OpcionBasica => {
+  if (!tieneDataZoom(option)) return option;
+  return {
+    ...option,
+    dataZoom: listaZoom(option).map((z) => {
+      if (!esZoomDeVista(z)) return z;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { start, end, startValue, endValue, ...resto } = z;
+      return ventana ? { ...resto, startValue: ventana.desde, endValue: ventana.hasta } : { ...resto, start: 0, end: 100 };
+    }),
+  };
+};
+
+/** Ventana actual de una instancia, en valores del eje X (las categorías por su etiqueta, no su índice). */
+const ventanaDeInstancia = (instancia: ReturnType<ReactECharts["getEchartsInstance"]> | undefined): VentanaEje | null => {
+  if (!instancia || instancia.isDisposed()) return null;
+  const opcion = instancia.getOption() as { dataZoom?: ZoomBasico[]; xAxis?: { type?: string; data?: unknown[] }[] };
+  const zoom = opcion.dataZoom?.find(esZoomDeVista);
+  if (!zoom || zoom.startValue === undefined || zoom.endValue === undefined) return null;
+  const eje = opcion.xAxis?.[0];
+  const valor = (v: unknown): string | number => {
+    if (eje?.type === "category" && Array.isArray(eje.data) && typeof v === "number") {
+      const dato = eje.data[v] as unknown;
+      return (dato && typeof dato === "object" && "value" in dato ? (dato as { value: string }).value : dato) as string;
+    }
+    return v as number;
+  };
+  return { desde: valor(zoom.startValue), hasta: valor(zoom.endValue) };
+};
+
+/** Para papel: sin animacion ni slider (se queda el zoom `inside` con su ventana). */
+const paraImpresion = (option: OpcionBasica): OpcionBasica => ({
+  ...option,
+  animation: false,
+  ...(tieneDataZoom(option) && { dataZoom: listaZoom(option).filter((z) => z.type !== "slider") }),
+});
+
+const OPTS_IMPRESION = { renderer: "svg" as const };
+
 /**
  * Lo que se pinta a partir de una `option` (la de la tarjeta o la de pantalla completa): tokens,
- * barras ↔ líneas y selección de rango. Cada modo decide sus botones con la suya.
+ * etiquetas, barras ↔ líneas, ventana de zoom y selección de rango. Cada modo decide sus botones con la suya.
+ * `ventana`: `undefined` deja el zoom de la opción; `null` muestra todo; un valor lo fija.
  */
 const prepararOpcion = (
   option: OpcionBasica | null,
   tipoElegido: TipoSerie | null,
   cambioTipo: boolean,
   forma: FormaSeleccion,
+  etiquetasPropias: boolean | null = null,
+  ventana?: VentanaEje | null,
 ) => {
   if (!option) return { opcion: null, tipoOriginal: null, tieneZoom: false };
   // Paleta de series y tipografía del sistema por defecto; cada gráfica puede sobrescribirlas.
   let opcion: OpcionBasica = { ...OPCIONES_TOKENS, ...option };
+  if (etiquetasPropias !== null) opcion = conEtiquetas(opcion, etiquetasPropias);
+  if (ventana !== undefined) opcion = conVentana(opcion, ventana);
   if (cambioTipo && tipoElegido) opcion = conTipo(opcion, tipoElegido);
   const seleccion = seleccionDeForma(forma);
   if (seleccion) opcion = conSeleccionRango(opcion, seleccion);
@@ -120,8 +179,20 @@ export interface TarjetaGraficaProps {
    * sankey, radar…
    */
   estadisticas?: boolean;
-  /** Etiquetas de valores: si se pasa, aparece el boton para mostrarlas u ocultarlas. */
-  etiquetas?: { activas: boolean; alternar: () => void };
+  /**
+   * Etiquetas de valores. Sin pasarlo, la tarjeta las enciende y apaga sola (cambia `label.show` de
+   * las series) y el botón está siempre en pantalla completa (en la tarjeta, salvo `compacta`).
+   * Pasarlo solo si la vista rearma `option` con otro formato; `false` quita el botón.
+   */
+  etiquetas?: { activas: boolean; alternar: () => void } | false;
+  /** Estado inicial de las etiquetas automáticas. Por defecto, el que trae `option`. */
+  etiquetasIniciales?: boolean;
+  /**
+   * Ventana del filtro temporal de la vista (valores del eje X). La tarjeta arranca en ella (si su
+   * `option` trae `dataZoom`), la pantalla completa muestra todo y "Restablecer zoom" vuelve a ella en
+   * las dos. El zoom hecho en pantalla completa se conserva al cerrarla.
+   */
+  zoomBase?: VentanaEje;
   /** "Ver datos": si se pasa, aparece el boton. */
   onVerDatos?: () => void;
   /**
@@ -199,7 +270,9 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     cargando = false,
     onClickPunto,
     estadisticas: conEstadisticas = true,
-    etiquetas,
+    etiquetas: etiquetasProp,
+    etiquetasIniciales,
+    zoomBase,
     onVerDatos,
     porcentajes,
     cambioTipo = false,
@@ -215,6 +288,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     seleccionRango,
     className = "",
   } = props;
+  const impresion = useImpresion();
   const claseDesborde = anchoMinimo ? "overflow-x-auto" : "overflow-x-hidden";
   const chartRef = useRef<ReactECharts>(null);
   // Tipo elegido con el botón barras ↔ líneas; `null` = el que trae `option`.
@@ -241,15 +315,42 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
   }, [rangoIgnorado, modoIgnorado]);
   const forma = conRango ? formaDe(seleccionRango) : null;
   const formaCompleta = conRangoCompleta ? forma : null;
+
+  // Etiquetas automáticas (sin `etiquetas`): `null` = las que trae la opción.
+  const [etiquetasPropias, setEtiquetasPropias] = useState<boolean | null>(etiquetasIniciales ?? null);
+  const autoEtiquetas = etiquetasProp === undefined;
+  const etiquetas =
+    etiquetasProp === false
+      ? undefined
+      : (etiquetasProp ?? {
+          activas: etiquetasPropias ?? etiquetasDeOpcion(option),
+          alternar: () => setEtiquetasPropias((v) => !(v ?? etiquetasDeOpcion(option))),
+        });
+  const propias = autoEtiquetas ? etiquetasPropias : null;
+
+  // Zoom con que se cerró la pantalla completa. Ligado al filtro (`zoomBase`) o, sin él, a la
+  // `option`: cambiar el filtro o los datos lo descarta sin necesidad de un efecto.
+  const desdeBase = zoomBase?.desde;
+  const hastaBase = zoomBase?.hasta;
+  const claveZoom = zoomBase ? `${desdeBase}|${hastaBase}` : option;
+  const [zoomCerrado, setZoomCerrado] = useState<{ clave: unknown; ventana: VentanaEje } | null>(null);
+  const ventanaGuardada = zoomCerrado && zoomCerrado.clave === claveZoom ? zoomCerrado.ventana : null;
+  const ventanaTarjeta = useMemo<VentanaEje | undefined>(
+    () => ventanaGuardada ?? (desdeBase !== undefined && hastaBase !== undefined ? { desde: desdeBase, hasta: hastaBase } : undefined),
+    [ventanaGuardada, desdeBase, hastaBase],
+  );
+  // La pantalla completa, con filtro, abre mostrando todo.
+  const ventanaCompleta = zoomBase ? null : undefined;
+
   // Memorizadas: cada opción nueva redibuja la selección, y la vista puede volver a renderizar sin
   // que cambie nada (p. ej. al mover las asas).
-  const tarjeta = useMemo(
-    () => prepararOpcion(option, tipoElegido, cambioTipo, forma),
-    [option, tipoElegido, cambioTipo, forma],
-  );
+  const tarjeta = useMemo(() => {
+    const preparada = prepararOpcion(option, tipoElegido, cambioTipo, forma, propias, ventanaTarjeta);
+    return impresion && preparada.opcion ? { ...preparada, opcion: paraImpresion(preparada.opcion) } : preparada;
+  }, [option, tipoElegido, cambioTipo, forma, propias, ventanaTarjeta, impresion]);
   const completa = useMemo(
-    () => prepararOpcion(optionCompleta, tipoElegido, cambioTipo, formaCompleta),
-    [optionCompleta, tipoElegido, cambioTipo, formaCompleta],
+    () => prepararOpcion(optionCompleta, tipoElegido, cambioTipo, formaCompleta, propias, ventanaCompleta),
+    [optionCompleta, tipoElegido, cambioTipo, formaCompleta, propias, ventanaCompleta],
   );
   const modo = (enPantallaCompleta: boolean) => (enPantallaCompleta ? completa : tarjeta);
   // Instancia propia de la pantalla completa: estadisticas e imagen deben actuar sobre la grafica
@@ -271,6 +372,12 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     zoomCompartido,
   );
   const eventos = useEventos(onClickPunto);
+  // ¿Se movió el zoom en pantalla completa? Entonces, al cerrarla, la tarjeta se queda con él.
+  const zoomTocadoCompleta = useRef(false);
+  const alZoomCompleta = useCallback(() => {
+    zoomTocadoCompleta.current = true;
+  }, []);
+  const eventosCompleta = useMemo(() => ({ ...eventos, datazoom: alZoomCompleta }), [eventos, alZoomCompleta]);
 
   const instanciaActiva = () =>
     (pantallaCompleta ? chartRefCompleta : chartRef).current?.getEchartsInstance();
@@ -296,21 +403,34 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     onCambiarTipo?.(nuevo);
   };
 
-  /** Vuelve al zoom inicial (lo que hacía `restore` del toolbox). */
-  const restablecerZoom = () => instanciaActiva()?.dispatchAction({ type: "restore" });
+  /**
+   * Vuelve al zoom inicial (lo que hacía `restore` del toolbox). Con `zoomBase`, a la ventana del
+   * filtro de la vista, también en pantalla completa (que abre mostrando todo).
+   */
+  const restablecerZoom = () => {
+    const instancia = instanciaActiva();
+    setZoomCerrado(null);
+    if (!zoomBase) return instancia?.dispatchAction({ type: "restore" });
+    instancia?.dispatchAction({ type: "dataZoom", startValue: zoomBase.desde, endValue: zoomBase.hasta });
+  };
 
   const abrirPantallaCompleta = () => {
     setSeries(null);
+    zoomTocadoCompleta.current = false;
     setPantallaCompleta(true);
   };
   const cerrarPantallaCompleta = () => {
+    if (zoomTocadoCompleta.current) {
+      const ventana = ventanaDeInstancia(chartRefCompleta.current?.getEchartsInstance());
+      if (ventana) setZoomCerrado({ clave: claveZoom, ventana });
+    }
     setSeries(null);
     setPantallaCompleta(false);
   };
 
   /** Barra de opciones. En pantalla completa no ofrece "pantalla completa" (el modal ya cierra). */
   const botones = (enPantallaCompleta: boolean) => {
-    if (!option) return null;
+    if (!option || impresion) return null;
     const todas = enPantallaCompleta || barra === "completa";
     const { tipoOriginal, tieneZoom } = modo(enPantallaCompleta);
     const tipoActual = tipoElegido ?? tipoOriginal;
@@ -321,7 +441,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
             <Button size="small" type="text" icon={<BarChartOutlined />} onClick={verEstadisticas} />
           </Tooltip>
         )}
-        {etiquetas && (
+        {etiquetas && (!autoEtiquetas || enPantallaCompleta || !compacta) && (
           <Tooltip title={etiquetas.activas ? "Ocultar etiquetas" : "Mostrar etiquetas"}>
             <Button
               size="small"
@@ -412,7 +532,9 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     ));
 
   return (
-    <div className={`bg-superficie border border-linea rounded-tarjeta flex flex-col min-w-0 ${className}`}>
+    <div
+      className={`bg-superficie border border-linea rounded-tarjeta flex flex-col min-w-0 break-inside-avoid ${className}`}
+    >
       {cabecera(false)}
 
       {/* Contenedor de scroll solo si la gráfica pide `anchoMinimo`: con `overflow-x: auto` fijo,
@@ -428,6 +550,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
             <ReactECharts
               ref={chartRef}
               option={tarjeta.opcion}
+              opts={impresion ? OPTS_IMPRESION : undefined}
               notMerge
               onEvents={eventos}
               onChartReady={rangoTarjeta.alListo}
@@ -463,7 +586,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
                   ref={chartRefCompleta}
                   option={completa.opcion}
                   notMerge
-                  onEvents={eventos}
+                  onEvents={eventosCompleta}
                   onChartReady={rangoCompleta.alListo}
                   style={{ height: "100%", width: "100%" }}
                 />

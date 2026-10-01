@@ -23,25 +23,48 @@ export const punto = (fecha: Date | string, valor: number | null | undefined): P
 export const ordenarPorFecha = <T extends { fechaCorte: Date | string }>(filas: T[]): T[] =>
   [...filas].sort((a, b) => new Date(a.fechaCorte).getTime() - new Date(b.fechaCorte).getTime());
 
-/** Slider compacto: 18 px de alto para no robarle lienzo a graficas de ~340 px. */
-export const zoomTemporal = (inicio = 0, { conSlider = true } = {}) => [
-  ...(conSlider
-    ? [
-        {
-          type: "slider",
-          xAxisIndex: [0],
-          start: inicio,
-          end: 100,
-          bottom: 6,
-          height: 16,
-          borderColor: color.linea.base,
-          fillerColor: conAlfa(color.datos.series[0], 0.15),
-          textStyle: TEXTO_GRAFICA,
-        },
-      ]
-    : []),
-  { type: "inside", xAxisIndex: [0], start: inicio, end: 100 },
-];
+/** Ventana de zoom por valores del eje X (categoria o tiempo), p. ej. el filtro Desde–Hasta de la vista. */
+export interface VentanaEje {
+  desde: string | number;
+  hasta: string | number;
+}
+
+/**
+ * Slider compacto: 18 px de alto para no robarle lienzo a graficas de ~340 px. `inicio` es el % de
+ * arranque (ver `inicioZoom`) o una ventana por valores (`{ desde, hasta }`) que acota la gráfica
+ * al filtro temporal de la vista.
+ */
+export const zoomTemporal = (inicio: number | VentanaEje = 0, { conSlider = true } = {}) => {
+  const ventana =
+    typeof inicio === "number"
+      ? { start: inicio, end: 100 }
+      : { startValue: inicio.desde, endValue: inicio.hasta };
+  return [
+    ...(conSlider
+      ? [
+          {
+            type: "slider",
+            xAxisIndex: [0],
+            ...ventana,
+            bottom: 6,
+            height: 16,
+            borderColor: color.linea.base,
+            fillerColor: conAlfa(color.datos.series[0], 0.15),
+            textStyle: TEXTO_GRAFICA,
+          },
+        ]
+      : []),
+    { type: "inside", xAxisIndex: [0], ...ventana },
+  ];
+};
+
+type SerieConEtiqueta = { label?: Record<string, unknown> } & Record<string, unknown>;
+
+/** Enciende o apaga `label` en todas las series; el resto de la etiqueta (formato, posición) se respeta. */
+export const conEtiquetas = <O extends { series?: unknown }>(option: O, visibles: boolean): O => ({
+  ...option,
+  series: ((option.series ?? []) as SerieConEtiqueta[]).map((s) => ({ ...s, label: { ...s.label, show: visibles } })),
+});
 
 /** Inicio del zoom para que se vean aprox. los ultimos `visibles` cortes. */
 export const inicioZoom = (puntos: number, visibles = 24): number =>

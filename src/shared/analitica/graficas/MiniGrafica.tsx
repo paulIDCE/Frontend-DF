@@ -1,14 +1,7 @@
 import { ReactNode, useMemo, useState } from "react";
 import TarjetaGrafica from "./TarjetaGrafica";
+import { conEtiquetas } from "./opcionesBase";
 import type { TarjetaGraficaProps } from "./TarjetaGrafica";
-
-type SerieConEtiqueta = { label?: Record<string, unknown> } & Record<string, unknown>;
-
-/** Enciende o apaga `label` en todas las series; el resto de la etiqueta (formato, posición) se respeta. */
-const conEtiquetas = (option: { series?: SerieConEtiqueta[] }, visibles: boolean) => ({
-  ...option,
-  series: (option.series ?? []).map((s) => ({ ...s, label: { ...s.label, show: visibles } })),
-});
 
 export interface MiniGraficaProps {
   /** Nombre del elemento (oficina, destino, calificación…). */

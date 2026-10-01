@@ -28,6 +28,9 @@ export type { PanelAcopladoProps } from "./PanelAcoplado";
 export { usePanelAcoplado } from "./usePanelAcoplado";
 export type { OpcionesPanelAcoplado } from "./usePanelAcoplado";
 
+/* Impresion (PDF) */
+export { ImpresionContext, useImpresion } from "./impresion";
+
 /* Filtros */
 export { default as BarraFiltros } from "./filtros/BarraFiltros";
 export type { ChipFiltro } from "./filtros/BarraFiltros";
@@ -59,6 +62,10 @@ export { default as BloqueDetalle, Dato, FichaDatos } from "./detalle/BloqueDeta
 
 /* Tablas */
 export { default as TablaAnalitica } from "./tablas/TablaAnalitica";
+export type { TablaAnaliticaProps, ExcelTabla } from "./tablas/TablaAnalitica";
+export { useArbolTabla } from "./tablas/useArbolTabla";
+export { arbolPorNivel, aplanarArbol } from "./tablas/arbol";
+export type { NodoArbol } from "./tablas/arbol";
 export { default as SelectorColumnas, useColumnasVisibles } from "./tablas/SelectorColumnas";
 export type { ColumnaElegible } from "./tablas/SelectorColumnas";
 export * from "./tablas/celdas";

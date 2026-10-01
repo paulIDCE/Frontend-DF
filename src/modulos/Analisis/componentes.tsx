@@ -154,6 +154,7 @@ const ventanaDeOpcion = (option: unknown): VentanaEje | undefined => {
  */
 export const Grafica = (props: {
   titulo: ReactNode;
+  nota?: ReactNode;
   option: unknown;
   alto?: number;
   cambioTipo?: boolean;
@@ -165,12 +166,14 @@ export const Grafica = (props: {
 
 const GraficaRevista = ({
   titulo,
+  nota,
   option,
   alto = 300,
   cambioTipo = true,
   estadisticas,
 }: {
   titulo: ReactNode;
+  nota?: ReactNode;
   option: unknown;
   alto?: number;
   cambioTipo?: boolean;
@@ -178,6 +181,7 @@ const GraficaRevista = ({
 }) => (
   <TarjetaGrafica
     titulo={titulo}
+    nota={nota}
     option={option}
     alto={alto}
     cambioTipo={cambioTipo}

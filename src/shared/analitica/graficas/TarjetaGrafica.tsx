@@ -6,6 +6,7 @@ import {
   CameraOutlined,
   ExpandOutlined,
   FontSizeOutlined,
+  InfoCircleOutlined,
   PercentageOutlined,
   SwapOutlined,
   TableOutlined,
@@ -167,6 +168,11 @@ const prepararOpcion = (
 export interface TarjetaGraficaProps {
   titulo: ReactNode;
   subtitulo?: ReactNode;
+  /**
+   * Nota metodológica (cambios normativos, fórmula, fuente): ícono ⓘ junto al título con el texto
+   * en un tooltip. En impresión se escribe bajo el título, porque el tooltip no sale en papel.
+   */
+  nota?: ReactNode;
   /** Controles propios de la grafica, a la izquierda de la barra de herramientas. */
   extra?: ReactNode;
   option: any | null;
@@ -264,6 +270,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
   const {
     titulo,
     subtitulo,
+    nota,
     extra,
     option,
     alto,
@@ -511,10 +518,19 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
           }`}
         >
           {titulo}
+          {nota && !impresion && (
+            <Tooltip title={nota} placement="bottomLeft">
+              <InfoCircleOutlined
+                aria-label="Nota metodológica"
+                className="ml-1.5 cursor-help align-middle text-detalle text-tinta-tenue"
+              />
+            </Tooltip>
+          )}
         </div>
         {subtitulo && (enPantallaCompleta || !compacta) && (
           <div className="text-tinta-tenue truncate text-detalle">{subtitulo}</div>
         )}
+        {nota && impresion && <div className="text-tinta-tenue text-detalle">ⓘ {nota}</div>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {extra}

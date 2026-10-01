@@ -133,6 +133,7 @@ const GraficasCategoria = ({ cat, extra, alto }: { cat: CategoriaIndicadores; ex
         <Grafica
           key={`${cat.key}-${i}`}
           titulo={g.titulo}
+          nota={g.nota}
           option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
           alto={alto}
           cambioTipo={!g.volatilidad}

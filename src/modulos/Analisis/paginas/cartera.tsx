@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Segmented } from "antd";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
+import { NOTA_DERIVADO, NOTA_SEGMENTACION_2021, notas } from "../notas";
 import { opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../opciones";
 
 /**
@@ -43,6 +44,7 @@ const CarteraRiesgoSegmentos = () => {
       />
       <Grafica
         titulo={vista === "saldo" ? "Cartera improductiva por segmento" : "Morosidad por segmento"}
+        nota={NOTA_SEGMENTACION_2021}
         option={opcionHistorico(ctx, series, etiquetas, { izq: vista === "saldo" ? "millones USD" : "porcentajes (%)" })}
         alto={320}
       />
@@ -101,6 +103,10 @@ export const Hoja12 = () => {
             <CarteraRiesgoSegmentos />
             <Grafica
               titulo="Cartera Refinanciada y Reestructurada (todos los segmentos)"
+              nota={notas(
+                "Suma de la cartera por vencer, vencida y que no devenga intereses de los 6 segmentos, incluidas las líneas COVID-19.",
+                NOTA_DERIVADO
+              )}
               option={opcionHistorico(
                 ctx,
                 [
@@ -155,6 +161,7 @@ const PaginaCarteraSegmento = ({ n, titulo }: { n: 1 | 2 | 3 | 4; titulo: string
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             <Grafica
               titulo="Evolución Histórica - Cartera de Crédito"
+              nota={NOTA_SEGMENTACION_2021}
               option={opcionHistorico(
                 ctx,
                 [
@@ -169,6 +176,7 @@ const PaginaCarteraSegmento = ({ n, titulo }: { n: 1 | 2 | 3 | 4; titulo: string
             />
             <Grafica
               titulo="Evolución Histórica - Cartera Refinanciada y Reestructurada"
+              nota={NOTA_SEGMENTACION_2021}
               option={opcionHistorico(
                 ctx,
                 [

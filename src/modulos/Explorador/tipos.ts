@@ -46,7 +46,7 @@ export interface CuadroCargado {
   notas: string[];
   /** `arbol`: estados financieros detallados (jerarquia por `Codigo_Base`). */
   vista?: "grupos" | "arbol";
-  /** Sector/entidad al que pertenecen los datos (Sistema/Tasas), para la coleccion y el carrito. */
+  /** Sector/entidad al que pertenecen los datos (Sistema/Tasas), para la coleccion y los favoritos. */
   sector?: string;
   sectorNombre?: string;
 }
@@ -61,20 +61,28 @@ export interface SerieColeccion {
   cuadroNombre?: string;
   unidad?: string;
   sectorNombre?: string;
+  /** Cuentas ancestro dentro del cuadro (de la raiz al padre): distingue variables homonimas. */
+  ruta?: string[];
+  /** Ramas del arbol "Contenidos" hasta el cuadro. */
+  contenidos?: string[];
   derecha: boolean;
   tipo: "line" | "bar";
 }
 
 /**
- * Item del carrito persistente. Misma forma que prueba-data
- * (`localStorage['carritoSeries']`), asi se conserva lo guardado.
+ * Serie guardada en favoritos (persistente). Misma forma que el carrito de prueba-data
+ * (`localStorage['carritoSeries']`), asi se migra lo guardado.
  */
-export interface ItemCarrito {
+export interface ItemFavorito {
   index: number;
   variable: string;
   cuadroId: string;
   cuadroNombre: string;
   sector?: string;
   sectorNombre?: string;
+  /** Cuentas ancestro dentro del cuadro (de la raiz al padre): distingue variables homonimas. */
+  ruta?: string[];
+  /** Ramas del arbol "Contenidos" hasta el cuadro. */
+  contenidos?: string[];
   data: FilaCuadro;
 }

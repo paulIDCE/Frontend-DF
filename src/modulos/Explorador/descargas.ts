@@ -1,32 +1,14 @@
-import { exportarExcel, type ColumnaExcel } from "@idce/kit";
-import type { CuadroCargado, FilaCuadro } from "./tipos";
-import { etiquetaPeriodo, numero, unionPeriodos } from "./datos";
+import type { CuadroCargado } from "./tipos";
 
 /**
- * Descarga de la tabla completa (todos los periodos, no solo los visibles),
- * igual que `descargarTabla` de prueba-data. Excel pasa de `.xls` HTML a
- * `.xlsx` real con `exportarExcel` del kit.
+ * CSV de la tabla con los periodos que se ven (filtro Desde–Hasta). El Excel lo ofrece la propia
+ * tabla (`TablaAnalitica` con `excel`), con la jerarquia agrupada.
  */
 
-export const descargarExcel = (cuadro: CuadroCargado) => {
-  const periodos = unionPeriodos(cuadro.filas);
-  const columnas: ColumnaExcel<FilaCuadro>[] = [
-    { titulo: "Grupo", valor: (f) => f.Grupo ?? "", ancho: 28 },
-    { titulo: "Variable", valor: (f) => f.Variable ?? "", ancho: 48 },
-    ...periodos.map<ColumnaExcel<FilaCuadro>>((p) => ({
-      titulo: etiquetaPeriodo(p),
-      valor: (f) => numero(f[p]),
-      ancho: 12,
-    })),
-  ];
-  const sufijo = cuadro.sectorNombre ? `_${cuadro.sectorNombre}` : "";
-  return exportarExcel(`${cuadro.id}${sufijo}_datos`, [
-    { nombre: cuadro.titulo || cuadro.id, columnas, filas: cuadro.filas },
-  ]);
-};
+export const nombreDescarga = (cuadro: CuadroCargado) =>
+  `${cuadro.id}${cuadro.sectorNombre ? `_${cuadro.sectorNombre}` : ""}_datos`;
 
-export const descargarCsv = (cuadro: CuadroCargado) => {
-  const periodos = unionPeriodos(cuadro.filas);
+export const descargarCsv = (cuadro: CuadroCargado, periodos: string[]) => {
   const celda = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 
   let csv = "﻿"; // BOM: Excel reconoce UTF-8
@@ -42,7 +24,7 @@ export const descargarCsv = (cuadro: CuadroCargado) => {
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${cuadro.id}_datos.csv`;
+  a.download = `${nombreDescarga(cuadro)}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();

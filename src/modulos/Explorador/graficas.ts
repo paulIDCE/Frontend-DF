@@ -1,4 +1,4 @@
-import { TEXTO_GRAFICA, color, inicioZoom, tipografia, zoomTemporal } from "@idce/kit";
+import { TEXTO_GRAFICA, color, inicioZoom, tipografia, zoomTemporal, type VentanaEje } from "@idce/kit";
 import type { SerieColeccion } from "./tipos";
 import { etiquetaPeriodo, numero, tipoPeriodo, unionPeriodos } from "./datos";
 
@@ -13,14 +13,27 @@ const fmt1 = (v: number) =>
 
 interface Opciones {
   etiquetas: boolean;
-  /** Puntos visibles al abrir (el original arranca mostrando los ultimos 5). */
-  visibles?: number;
+  /** Filtro Periodo Desde–Hasta de la vista: la grafica abre (y restablece) en el. */
+  rango?: [string, string];
 }
 
-export const opcionSeries = (series: SerieColeccion[], { etiquetas, visibles = 5 }: Opciones) => {
+/**
+ * Ventana del filtro sobre los periodos de las series (en etiquetas del eje X). Las series pueden
+ * venir de otro cuadro (favoritos): se toma el primer periodo >= Desde y el ultimo <= Hasta.
+ */
+export const ventanaSeries = (series: SerieColeccion[], rango?: [string, string]): VentanaEje | undefined => {
+  if (!rango || !rango[0] || series.length === 0) return undefined;
+  const periodos = unionPeriodos(series.map((s) => s.fila));
+  const desde = periodos.find((p) => p >= rango[0]);
+  const hasta = [...periodos].reverse().find((p) => p <= rango[1]);
+  return desde && hasta && desde <= hasta ? { desde: etiquetaPeriodo(desde), hasta: etiquetaPeriodo(hasta) } : undefined;
+};
+
+export const opcionSeries = (series: SerieColeccion[], { etiquetas, rango }: Opciones) => {
   if (series.length === 0) return null;
 
   const periodos = unionPeriodos(series.map((s) => s.fila));
+  const ventana = ventanaSeries(series, rango);
   const mensual = tipoPeriodo(periodos) === "mensual";
   const hayDerecha = series.some((s) => s.derecha);
   const hayBarras = series.some((s) => s.tipo === "bar");
@@ -58,7 +71,8 @@ export const opcionSeries = (series: SerieColeccion[], { etiquetas, visibles = 5
       axisTick: { show: false },
     },
     yAxis: hayDerecha ? [eje("left"), eje("right")] : [eje("left")],
-    dataZoom: zoomTemporal(inicioZoom(periodos.length, visibles)),
+    // Sin filtro, como el original: los ultimos 5 puntos.
+    dataZoom: zoomTemporal(ventana ?? inicioZoom(periodos.length, 5)),
     series: series.map((s) => ({
       name: s.variable,
       type: s.tipo,

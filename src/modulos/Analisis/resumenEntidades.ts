@@ -2,6 +2,7 @@ import { archivoEntidad } from "@/services/datosService";
 import { apiEntidades, apiReporte } from "@/services/apiDatos";
 import { aFilasReporte } from "@/services/adaptadores";
 import type { FilaReporte } from "./datos";
+import { agregarDerivados } from "./derivados";
 
 /**
  * Entidades y reportes de la revista. Los rankings (hojas 5, 9, 24-26) y el
@@ -32,9 +33,9 @@ export const cargarListaEntidades = async (): Promise<EntidadLista[]> =>
     provincia: e.provincia ?? DESCONOCIDO,
   }));
 
-/** Reporte completo de la entidad (cuadro REP01) en la forma ancha de siempre. */
+/** Reporte completo de la entidad (cuadro REP01) en la forma ancha de siempre, con los indicadores derivados. */
 export const cargarReporte = async (entidad: string): Promise<FilaReporte[]> =>
-  aFilasReporte(await apiReporte(archivoEntidad(entidad)));
+  agregarDerivados(aFilasReporte(await apiReporte(archivoEntidad(entidad))));
 
 export const infoDe = (filas: FilaReporte[]) => ({
   tamano: String(filas[0]?.Tamaño ?? DESCONOCIDO),

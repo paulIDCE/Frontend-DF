@@ -33,6 +33,7 @@ export const NAVEGACION_27: NavegacionIndicadores = {
         { key: "endeudamiento", titulo: "Morosidad, cobertura y rentabilidad" },
         { key: "cobertura", titulo: "Cobertura y morosidad por cartera" },
         { key: "roa", titulo: "Rendimientos" },
+        { key: "complementarios", titulo: "Solvencia, eficiencia y fondeo" },
       ],
     },
   ],

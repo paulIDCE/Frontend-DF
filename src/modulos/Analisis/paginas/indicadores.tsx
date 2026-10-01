@@ -21,6 +21,7 @@ import { colorSerie, opcionHistorico } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
+import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -232,10 +233,12 @@ const RejillaIndicadores = ({
   );
 };
 
+const CATEGORIAS_27 = [...INDICADORES_27, ...COMPLEMENTARIOS_27];
+
 export const Hoja27 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS" subtitulo="Métricas clave de desempeño financiero" />
-    <RejillaIndicadores categorias={INDICADORES_27} navegacion={NAVEGACION_27} />
+    <RejillaIndicadores categorias={CATEGORIAS_27} navegacion={NAVEGACION_27} />
   </>
 );
 

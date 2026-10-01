@@ -7,6 +7,7 @@ import { Hoja12, Hoja13, Hoja14, Hoja15, Hoja16 } from "./cartera";
 import { Hoja27, Hoja28, Hoja29, Hoja30, Hoja31 } from "./indicadores";
 import { Hoja17, Hoja18, Hoja19, Hoja20, Hoja21, Hoja22, Hoja23 } from "./operaciones";
 import { HojaTendencias } from "./tendencias";
+import { HojaAuditoria } from "./auditoria";
 
 /** Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`). */
 
@@ -52,4 +53,5 @@ export const HOJAS: Hoja[] = [
   h(30, "Tasas de Interés", Hoja30),
   h(31, "Comparación entre entidades", Hoja31),
   h(32, "Tendencias (TAM y Gráfico Z)", HojaTendencias),
+  h(33, "Auditoría de desviaciones", HojaAuditoria),
 ];

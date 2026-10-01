@@ -3,7 +3,8 @@ import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, useNombreDescarga, type CuentaTabla } from "../componentes";
 import { fechaCorta, fmt } from "../datos";
 import { claseVar } from "../estilos";
-import { opcionComparativoAnual, opcionHistorico } from "../opciones";
+import { opcionCascada, opcionComparativoAnual, opcionHistorico, type PasoCascada } from "../opciones";
+import type { Ctx } from "../datos";
 
 /**
  * Hojas 10 (PyG mensualizado) y 11 (PyG anualizado) — porte de
@@ -102,6 +103,40 @@ const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
   );
 };
 
+/**
+ * Cascada de PyG (cuadro analitico de Managerial Analyzer): de los intereses ganados al resultado
+ * del ejercicio, pasando por cada margen precalculado. Cada variacion es la diferencia entre dos
+ * margenes consecutivos, asi la cascada siempre concilia con los totales del reporte.
+ */
+const pasosCascada = (ctx: Ctx, c: (code: string) => string): PasoCascada[] => {
+  const v = (code: string) => ctx.valor(c(code));
+  const tramos: [string, string, string][] = [
+    ["Intereses causados", "@51", "Marg_Ne"],
+    ["Comisiones y otros financieros", "Marg_Ne", "Mar_Br_Fi"],
+    ["Provisiones", "Mar_Br_Fi", "Mar_Ne_Fina"],
+    ["Gastos de operación", "Mar_Ne_Fina", "Mar_Inte"],
+    ["Otros operacionales", "Mar_Inte", "Mar_Oper"],
+    ["Otros ingresos y gastos", "Mar_Oper", "Gan_Pe_Imp"],
+    ["Impuestos y participación", "Gan_Pe_Imp", "Gan_Eje"],
+  ];
+  const subtotales: Record<string, string> = {
+    Marg_Ne: "Margen neto de intereses",
+    Mar_Br_Fi: "Margen bruto financiero",
+    Mar_Ne_Fina: "Margen neto financiero",
+    Mar_Inte: "Margen de intermediación",
+    Mar_Oper: "Margen operacional",
+    Gan_Pe_Imp: "Resultado antes de impuestos",
+    Gan_Eje: "Resultado del ejercicio",
+  };
+  return [
+    { nombre: "Intereses ganados", valor: v("@51"), total: true },
+    ...tramos.flatMap(([nombre, desde, hasta]) => [
+      { nombre, valor: v(hasta) - v(desde) },
+      { nombre: subtotales[hasta], valor: v(hasta), total: true },
+    ]),
+  ];
+};
+
 /** Codigo anualizado: `@5` -> `@5A`; `Marg_Ne` -> `Marg_Ne_anual`. */
 const anual = (code: string) => (code.startsWith("@") ? `${code}A` : `${code}_anual`);
 
@@ -146,6 +181,14 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
           </PanelAnalisis>
         </div>
         <div className="flex min-w-0 flex-col gap-3">
+          <Grafica
+            titulo={`Cascada de resultados${anualizado ? " (Anualizado)" : ""} - ${fechaCorta(ctx.fecha)}`}
+            nota="De los intereses ganados al resultado del ejercicio. Verde suma, rojo resta; en azul, los márgenes del reporte."
+            option={opcionCascada(pasosCascada(ctx, c), etiquetas)}
+            alto={360}
+            cambioTipo={false}
+            estadisticas={false}
+          />
           <Grafica
             titulo={`Análisis Comparativo Ganancias y Pérdidas${anualizado ? " (Anualizado)" : ""}`}
             option={opcionComparativoAnual(ctx, c("Gan_Eje"), etiquetas)}

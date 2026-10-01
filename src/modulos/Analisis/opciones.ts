@@ -183,3 +183,73 @@ export const opcionMini = (
     ],
   };
 };
+
+/** Paso de una cascada: total / subtotal (barra desde 0) o variacion (desde el acumulado). */
+export interface PasoCascada {
+  nombre: string;
+  valor: number;
+  total?: boolean;
+}
+
+/**
+ * Cascada (waterfall) con barras apiladas: una serie transparente de base y dos visibles (parte
+ * positiva y negativa). El apilado de ECharts separa los signos, asi que un paso que cruza el 0
+ * (resultado negativo) se dibuja bien sin series personalizadas.
+ */
+export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "millones USD") => {
+  let acumulado = 0;
+  const filas = pasos.map((p) => {
+    const desde = p.total ? 0 : acumulado;
+    const hasta = p.total ? p.valor : acumulado + p.valor;
+    acumulado = hasta;
+    const lo = Math.min(desde, hasta);
+    const hi = Math.max(desde, hasta);
+    const tono = p.total ? S[0] : p.valor >= 0 ? color.exito.base : color.error.base;
+    if (lo >= 0) return { ...p, base: lo, pos: hi - lo, neg: 0, tono };
+    if (hi <= 0) return { ...p, base: hi, pos: 0, neg: lo - hi, tono };
+    return { ...p, base: 0, pos: hi, neg: lo, tono };
+  });
+  const visible = (clave: "pos" | "neg") => ({
+    name: clave,
+    type: "bar",
+    stack: "cascada",
+    barMaxWidth: 48,
+    data: filas.map((f) => ({ value: f[clave], itemStyle: { color: f.tono } })),
+    label: {
+      show: etiquetas,
+      position: clave === "pos" ? "top" : "bottom",
+      ...TEXTO_GRAFICA,
+      fontWeight: "bold",
+      // La etiqueta va en la parte que lleva el signo del paso (en una que cruza el 0, la positiva).
+      formatter: (p: { dataIndex: number }) => {
+        const f = filas[p.dataIndex];
+        const enEsta = clave === "pos" ? f.pos !== 0 : f.pos === 0 && f.neg !== 0;
+        return enEsta ? fmt(f.valor) : "";
+      },
+    },
+  });
+  return {
+    tooltip: {
+      trigger: "axis",
+      confine: true,
+      axisPointer: PUNTERO_BARRA,
+      formatter: (ps: { dataIndex: number }[]) => {
+        const f = filas[ps[0]?.dataIndex ?? 0];
+        return `<strong>${f.nombre}</strong><br/>${f.total ? "Total" : f.valor >= 0 ? "Suma" : "Resta"}: <strong>${fmt(f.valor)}</strong>`;
+      },
+    },
+    grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: filas.map((f) => f.nombre),
+      axisTick: { show: false },
+      axisLabel: { ...TEXTO_GRAFICA, interval: 0, rotate: 35 },
+    },
+    yAxis: ejeValor(eje),
+    series: [
+      { name: "base", type: "bar", stack: "cascada", silent: true, itemStyle: { color: "transparent" }, data: filas.map((f) => f.base) },
+      visible("pos"),
+      visible("neg"),
+    ],
+  };
+};

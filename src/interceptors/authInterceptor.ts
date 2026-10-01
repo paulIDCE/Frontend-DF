@@ -41,10 +41,17 @@ const getAuthToken = async (): Promise<string | undefined> => {
  * `Access-Control-Allow-Credentials`, asi que con `true` el navegador descarta cada respuesta
  * (CORS) y el interceptor la confunde con un backend caido.
  */
-const createClient = (withCredentials: boolean): AxiosInstance => {
+/**
+ * Ultima config aplicada, fuera del modulo: si el HMR de Vite vuelve a ejecutar este archivo, las
+ * instancias nuevas nacen con su `baseURL` (sin ella las peticiones caen en el servidor de la app).
+ */
+const configGlobal = globalThis as { __rutasApi?: Pick<RoutesConfig, "VITE_API_URL" | "VITE_API_SSO_URL"> };
+
+const createClient = (withCredentials: boolean, baseURL?: string): AxiosInstance => {
   const instance = axios.create({
     timeout: HTTP_TIMEOUT,
     withCredentials,
+    baseURL,
   });
 
   instance.interceptors.request.use(
@@ -86,13 +93,14 @@ const createClient = (withCredentials: boolean): AxiosInstance => {
 };
 
 /** API propia de la app. */
-export const api = createClient(false);
+export const api = createClient(false, configGlobal.__rutasApi?.VITE_API_URL);
 
 /** API del SSO: Empleado, Oficina, Catalogos y validateToken. */
-export const apiSSO = createClient(true);
+export const apiSSO = createClient(true, configGlobal.__rutasApi?.VITE_API_SSO_URL);
 
 /** Registrada en `allServices` (indexService); la llama `ConfigProvider` al arrancar. */
 export const initializeAuthService = (config: RoutesConfig): void => {
+  configGlobal.__rutasApi = { VITE_API_URL: config.VITE_API_URL, VITE_API_SSO_URL: config.VITE_API_SSO_URL };
   api.defaults.baseURL = config.VITE_API_URL;
   apiSSO.defaults.baseURL = config.VITE_API_SSO_URL;
 };

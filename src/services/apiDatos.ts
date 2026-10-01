@@ -31,7 +31,14 @@ const leer = <T>(url: string, params: Params = {}): Promise<T> => {
   const clave = url + JSON.stringify(limpios);
   let promesa = cache.get(clave) as Promise<T> | undefined;
   if (!promesa) {
-    promesa = api.get<T>(url, { params: limpios }).then((r) => r.data);
+    promesa = api.get<T>(url, { params: limpios }).then((r) => {
+      // Sin `baseURL` (p. ej. el cliente se recreo en un HMR antes de `initializeAuthService`) la
+      // peticion cae en el servidor de la app y vuelve el `index.html` con 200: no es un dato.
+      if (r.data === null || typeof r.data !== "object") {
+        throw new Error(`Respuesta inesperada de la API en ${url}: se esperaba JSON.`);
+      }
+      return r.data;
+    });
     promesa.catch(() => cache.delete(clave));
     cache.set(clave, promesa);
   }

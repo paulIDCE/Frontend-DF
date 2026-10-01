@@ -5,8 +5,8 @@ import type { FilaReporte } from "@/modulos/Analisis/datos";
 /**
  * De la API (series largas) a la forma "ancha" de los JSON de prueba-data
  * (metadatos + una clave por periodo). Asi las tablas, graficas, descargas,
- * la coleccion y el carrito siguen igual, y el carrito guardado en
- * `localStorage` sigue siendo compatible.
+ * la coleccion y los favoritos siguen igual, y los favoritos guardados en
+ * `localStorage` siguen siendo compatibles.
  */
 
 /** `{ "2025-01": v1, "2025-02": v2, ... }` */

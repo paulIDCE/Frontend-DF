@@ -57,20 +57,32 @@ export const controlesDe = (tipo: TipoCuadro) => ({
   credito: tipo.startsWith("cartera"),
 });
 
-export const cargarCuadroSistema = async (
-  tipo: TipoCuadro,
-  id: string,
-  f: Filtros
-): Promise<CuadroCargado> => {
+/**
+ * Cuadros ya pedidos en esta sesion (por cuadro + filtros que le aplican): volver a uno es
+ * inmediato. Se guarda la promesa, asi dos pedidos iguales en vuelo comparten la peticion; si
+ * falla, se olvida para poder reintentar.
+ */
+const CACHE_MAX = 40;
+const cache = new Map<string, Promise<CuadroCargado>>();
+
+export const cargarCuadroSistema = (tipo: TipoCuadro, id: string, f: Filtros): Promise<CuadroCargado> => {
   const c = controlesDe(tipo);
-  const cuadro = await apiCuadro(id, {
+  const params = {
     sector: c.sector ? f.sector : undefined,
     // La pantalla maneja el nombre ("BP. PICHINCHA"); la API, el id ("BP__PICHINCHA").
     entidad: c.entidad ? archivoEntidad(f.entidad) : undefined,
     analisis: c.analisis ? f.analisis : undefined,
     credito: c.credito ? f.credito : undefined,
-  });
-  return aCuadroCargado(cuadro);
+  };
+  const clave = JSON.stringify([id, params]);
+  const guardado = cache.get(clave);
+  if (guardado) return guardado;
+
+  const promesa = apiCuadro(id, params).then(aCuadroCargado);
+  promesa.catch(() => cache.delete(clave));
+  cache.set(clave, promesa);
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+  return promesa;
 };
 
 export const cargarEntidades = async (): Promise<{ value: string; label: string }[]> =>

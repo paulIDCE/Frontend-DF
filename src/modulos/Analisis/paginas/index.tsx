@@ -9,6 +9,7 @@ import { Hoja17, Hoja18, Hoja19, Hoja20, Hoja21, Hoja22, Hoja23 } from "./operac
 import { HojaTendencias } from "./tendencias";
 import { HojaAuditoria } from "./auditoria";
 import { HojaFuentesUsos } from "./fuentesUsos";
+import { HojaRankingIndicador } from "./rankingIndicador";
 
 /** Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`). */
 
@@ -56,4 +57,5 @@ export const HOJAS: Hoja[] = [
   h(32, "Tendencias (TAM y Gráfico Z)", HojaTendencias),
   h(33, "Auditoría de desviaciones", HojaAuditoria),
   h(34, "Fuentes y Usos", HojaFuentesUsos),
+  h(35, "Ranking por Indicador", HojaRankingIndicador),
 ];

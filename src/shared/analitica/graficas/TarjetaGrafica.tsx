@@ -5,6 +5,7 @@ import {
   BarChartOutlined,
   CameraOutlined,
   ExpandOutlined,
+  FieldNumberOutlined,
   FontSizeOutlined,
   InfoCircleOutlined,
   PercentageOutlined,
@@ -23,6 +24,7 @@ import type { EjesZoom, SeleccionRango, VentanaZoom } from "./useSeleccionRango"
 import ControlesPeriodo from "./ControlesPeriodo";
 import { conEtiquetas, type VentanaEje } from "./opcionesBase";
 import { useImpresion } from "../impresion";
+import { aBase100, admiteBase100 } from "./base100";
 
 // CommonJS: en Node (Vitest) el `default` llega envuelto. Ver `interopDefault`.
 const ReactECharts = interopDefault(ReactEChartsModulo);
@@ -207,6 +209,12 @@ export interface TarjetaGraficaProps {
    */
   porcentajes?: { activos: boolean; alternar: () => void };
   /**
+   * Botón "Base 100": la tarjeta pasa las series a índice (valor / valor del primer periodo
+   * visible × 100) para comparar evoluciones de distinta escala. Solo en gráficas con eje X de
+   * categorías; la opción de la vista no cambia.
+   */
+  base100?: boolean;
+  /**
    * Botón barras ↔ líneas. La tarjeta cambia el `type` de las series de barras o líneas (también
    * en pantalla completa); `onCambiarTipo` avisa a la vista si necesita saberlo.
    */
@@ -272,7 +280,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     subtitulo,
     nota,
     extra,
-    option,
+    option: optionVista,
     alto,
     cargando = false,
     onClickPunto,
@@ -282,6 +290,7 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
     zoomBase,
     onVerDatos,
     porcentajes,
+    base100 = false,
     cambioTipo = false,
     onCambiarTipo,
     onDescargarDatos,
@@ -301,12 +310,18 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
   // Tipo elegido con el botón barras ↔ líneas; `null` = el que trae `option`.
   const [tipoElegido, setTipoElegido] = useState<TipoSerie | null>(null);
   const [pantallaCompleta, setPantallaCompleta] = useState(false);
-  const optionCompleta =
-    opcionPantallaCompleta === undefined
-      ? option
-      : typeof opcionPantallaCompleta === "function"
-        ? option && opcionPantallaCompleta(option)
-        : opcionPantallaCompleta;
+  const [enBase100, setEnBase100] = useState(false);
+  const conBase100 = base100 && admiteBase100(optionVista);
+  const option = useMemo(() => (conBase100 && enBase100 ? aBase100(optionVista) : optionVista), [optionVista, conBase100, enBase100]);
+  const optionCompleta = useMemo(() => {
+    const completa =
+      opcionPantallaCompleta === undefined
+        ? optionVista
+        : typeof opcionPantallaCompleta === "function"
+          ? optionVista && opcionPantallaCompleta(optionVista)
+          : opcionPantallaCompleta;
+    return conBase100 && enBase100 ? aBase100(completa) : completa;
+  }, [optionVista, opcionPantallaCompleta, conBase100, enBase100]);
 
   const conRango = admiteSeleccionRango(option, seleccionRango);
   const conRangoCompleta = conRango && admiteSeleccionRango(optionCompleta, seleccionRango);
@@ -465,6 +480,20 @@ const TarjetaGrafica = (props: TarjetaGraficaProps) => {
               type={porcentajes.activos ? "link" : "text"}
               icon={<PercentageOutlined />}
               onClick={porcentajes.alternar}
+            />
+          </Tooltip>
+        )}
+        {todas && conBase100 && (
+          <Tooltip title={enBase100 ? "Ver valores" : "Ver en base 100 (índice desde el primer periodo visible)"}>
+            <Button
+              size="small"
+              type={enBase100 ? "link" : "text"}
+              icon={<FieldNumberOutlined />}
+              aria-label="Base 100"
+              onClick={() => {
+                setSeries(null);
+                setEnBase100((v) => !v);
+              }}
             />
           </Tooltip>
         )}

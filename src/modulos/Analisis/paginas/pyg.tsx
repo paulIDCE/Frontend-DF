@@ -1,6 +1,8 @@
+import { TablaAnalitica } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, type CuentaTabla } from "../componentes";
-import { fmt } from "../datos";
+import { CabeceraPagina, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, useNombreDescarga, type CuentaTabla } from "../componentes";
+import { fechaCorta, fmt } from "../datos";
+import { claseVar } from "../estilos";
 import { opcionComparativoAnual, opcionHistorico } from "../opciones";
 
 /**
@@ -42,6 +44,64 @@ const MARGENES: [string, string][] = [
   ["Gan_Pe_Imp", "GANANCIA O (PÉRDIDA) ANTES DE IMPUESTOS"],
 ];
 
+/** Partidas de los ratios de evolucion (Managerial Analyzer, "Analitica"): valor del año / del anterior. */
+const EVOLUCION: [string, string][] = [
+  ["@5", "Ingresos"],
+  ["Marg_Ne", "Margen neto de intereses"],
+  ["Mar_Oper", "Margen operacional"],
+  ["Gan_Pe_Imp", "Resultado antes de impuestos"],
+  ["Gan_Eje", "Resultado del ejercicio"],
+];
+
+interface FilaEvolucion {
+  key: string;
+  nombre: string;
+  anterior: number;
+  actual: number;
+  /** `actual / anterior`; `null` si el año anterior es 0 o el signo cambia (no es interpretable). */
+  ratio: number | null;
+}
+
+/**
+ * Ratios de evolucion: el acumulado al mes de corte contra el del mismo mes del año anterior
+ * (los resultados vienen acumulados en el año). Plan 06, item 1.9.
+ */
+const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
+  const { ctx } = useRevista();
+  const nombre = useNombreDescarga("ratios_evolucion");
+  const filas: FilaEvolucion[] = EVOLUCION.filter(([code]) => ctx.fila(codigo(code))).map(([code, n]) => {
+    const actual = ctx.valor(codigo(code));
+    const anterior = ctx.valor(codigo(code), ctx.anioAnterior);
+    return { key: code, nombre: n, anterior, actual, ratio: anterior > 0 && actual >= 0 ? actual / anterior : null };
+  });
+  const ratio = (r: FilaEvolucion) =>
+    r.ratio === null ? "n/a" : <span className={claseVar(r.ratio - 1)}>{r.ratio.toFixed(2)}×</span>;
+  return (
+    <TablaAnalitica<FilaEvolucion>
+      rowKey="key"
+      size="small"
+      dataSource={filas}
+      pagination={false}
+      bordered
+      excel={{
+        nombre,
+        columnas: [
+          { titulo: "Partida", valor: (r) => r.nombre, ancho: 32 },
+          { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => r.anterior, ancho: 14 },
+          { titulo: fechaCorta(ctx.fecha), valor: (r) => r.actual, ancho: 14 },
+          { titulo: "Ratio de evolución", valor: (r) => r.ratio ?? "", ancho: 16 },
+        ],
+      }}
+      columns={[
+        { title: "Ratios de evolución", key: "n", render: (_, r) => <span className="font-medium">{r.nombre}</span> },
+        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => fmt(r.anterior) },
+        { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => <strong>{fmt(r.actual)}</strong> },
+        { title: "Actual / anterior", key: "r", align: "right", render: (_, r) => ratio(r) },
+      ]}
+    />
+  );
+};
+
 /** Codigo anualizado: `@5` -> `@5A`; `Marg_Ne` -> `Marg_Ne_anual`. */
 const anual = (code: string) => (code.startsWith("@") ? `${code}A` : `${code}_anual`);
 
@@ -67,6 +127,7 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-3">
           <TablaEstructura cuentas={tabla} alto={440} />
+          <RatiosEvolucion codigo={c} />
           <PanelAnalisis>
             <Seccion tipo="resumen" titulo="Resumen General">
               {ingresos && (
@@ -92,6 +153,7 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
           />
           <Grafica
             titulo={`Evolución Histórica - Componentes PYG${anualizado ? " Anualizado" : ""}`}
+            base100
             option={opcionHistorico(
               ctx,
               [

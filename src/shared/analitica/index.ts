@@ -50,6 +50,7 @@ export { default as RejillaGraficas } from "./graficas/RejillaGraficas";
 export type { RejillaGraficasProps } from "./graficas/RejillaGraficas";
 export * from "./graficas/opcionesBase";
 export { opcionesMatrizCalor } from "./graficas/opcionesMatrizCalor";
+export { aBase100, admiteBase100 } from "./graficas/base100";
 export type {
   CeldaMatrizCalor,
   OpcionesMatrizCalor,

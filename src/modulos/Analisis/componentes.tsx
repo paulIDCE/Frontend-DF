@@ -159,6 +159,8 @@ export const Grafica = (props: {
   alto?: number;
   cambioTipo?: boolean;
   estadisticas?: boolean;
+  /** Botón "Base 100" (series de distinta escala: sectores, entidades, cuentas). */
+  base100?: boolean;
 }) => {
   const { etiquetas } = useRevista();
   return <GraficaRevista key={String(etiquetas)} {...props} />;
@@ -171,6 +173,7 @@ const GraficaRevista = ({
   alto = 300,
   cambioTipo = true,
   estadisticas,
+  base100,
 }: {
   titulo: ReactNode;
   nota?: ReactNode;
@@ -178,6 +181,7 @@ const GraficaRevista = ({
   alto?: number;
   cambioTipo?: boolean;
   estadisticas?: boolean;
+  base100?: boolean;
 }) => (
   <TarjetaGrafica
     titulo={titulo}
@@ -186,6 +190,7 @@ const GraficaRevista = ({
     alto={alto}
     cambioTipo={cambioTipo}
     estadisticas={estadisticas}
+    base100={base100}
     zoomBase={ventanaDeOpcion(option)}
     nombreImagen={typeof titulo === "string" ? titulo : "grafico"}
   />

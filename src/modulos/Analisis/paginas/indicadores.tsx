@@ -137,6 +137,7 @@ const GraficasCategoria = ({ cat, extra, alto }: { cat: CategoriaIndicadores; ex
           option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
           alto={alto}
           cambioTipo={!g.volatilidad}
+          base100={!g.volatilidad}
         />
       ))}
     </div>

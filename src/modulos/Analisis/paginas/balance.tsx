@@ -241,7 +241,7 @@ export const Hoja2 = () => {
         </aside>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {HISTORICOS.map((h) => (
-            <Grafica key={h.code} titulo={h.titulo} option={opcion(h.code)} alto={320} />
+            <Grafica key={h.code} titulo={h.titulo} option={opcion(h.code)} alto={320} base100 />
           ))}
         </div>
       </div>

@@ -71,6 +71,7 @@ export const Hoja12 = () => {
         <div className="flex min-w-0 flex-col gap-3">
           <Grafica
             titulo="Evolución Histórica - Cartera de Crédito"
+            base100
             option={opcionHistorico(
               ctx,
               [

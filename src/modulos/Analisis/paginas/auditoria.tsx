@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
 import { InputNumber, Segmented, Spin, Switch } from "antd";
 import { EstadoError, FranjaSelectores, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
-import { apiCuadro } from "@/services/apiDatos";
-import { archivoEntidad } from "@/services/datosService";
 import type { CuadroApi } from "@/types/api";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
+import { cargarBalanceEFI06 } from "../resumenEntidades";
 
 /**
  * Hoja "Auditoría de desviaciones" (Managerial Analyzer §5.2; plan 06, item 1.13). Para cada partida
@@ -45,8 +44,6 @@ interface FilaAuditoria {
   maximo: Nivel;
   children?: FilaAuditoria[];
 }
-
-const cargarEFI06 = (entidad: string) => apiCuadro("EFI06", { entidad: archivoEntidad(entidad), analisis: "saldo" });
 
 /** Percentil (0-100) por interpolacion lineal. */
 const percentil = (xs: number[], p: number) => {
@@ -123,7 +120,7 @@ const soloAltas = (filas: FilaAuditoria[]): FilaAuditoria[] =>
 export const HojaAuditoria = () => {
   const { ctx, entidad } = useRevista();
   const nombre = useNombreDescarga();
-  const { data: cuadro, isLoading, apiError } = useService(cargarEFI06, [entidad], [entidad], true, "No se pudo cargar el balance (EFI06).");
+  const { data: cuadro, isLoading, apiError } = useService(cargarBalanceEFI06, [entidad], [entidad], true, "No se pudo cargar el balance (EFI06).");
   const [u, setU] = useState<Umbrales>(UMBRALES_INICIALES);
   const [modo, setModo] = useState<"fijos" | "percentiles">("fijos");
   const [altas, setAltas] = useState(false);

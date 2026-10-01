@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Segmented } from "antd";
+import { useService } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
 import { NOTA_DERIVADO, NOTA_SEGMENTACION_2021, notas } from "../notas";
-import { opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../opciones";
+import { cargarBalanceEFI06 } from "../resumenEntidades";
+import { fechaLarga, fmt, zoomRevista } from "../datos";
+import { colorSerie, opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../opciones";
 
 /**
  * Hojas 12 (Intermediación) y 13-16 (cartera por segmento) — porte de
@@ -49,6 +52,39 @@ const CarteraRiesgoSegmentos = () => {
         alto={320}
       />
     </div>
+  );
+};
+
+/**
+ * Activos castigados (cuenta de orden 7103 del balance `EFI06`; plan 06, item 1.6): saldo
+ * acumulado de lo castigado que la entidad sigue gestionando. Complementa el indicador P4 de PERLAS.
+ */
+const ActivosCastigados = () => {
+  const { ctx, entidad, etiquetas } = useRevista();
+  const { data: cuadro } = useService(cargarBalanceEFI06, [entidad], [entidad], true, "No se pudo cargar el balance (EFI06).");
+  const fila = cuadro?.filas.find((f) => f.codigoBase === "7103");
+  if (!cuadro || !fila) return null;
+  const idx = new Map(cuadro.periodos.map((p, i) => [p, i]));
+  const data = ctx.fechas.map((f) => {
+    const i = idx.get(f);
+    return i === undefined ? null : ((fila.valores as (number | null)[])[i] ?? null);
+  });
+  return (
+    <Grafica
+      titulo="Activos castigados (cuenta de orden 7103)"
+      nota="Saldo de los activos castigados que la entidad mantiene en cuentas de orden. Fuente: balance EFI06."
+      option={{
+        tooltip: { trigger: "axis", confine: true, valueFormatter: (v: number) => fmt(v) },
+        grid: { left: 8, right: 16, top: 24, bottom: 50, containLabel: true },
+        xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { rotate: 45 } },
+        yAxis: { type: "value", name: "millones USD", axisLabel: { formatter: (v: number) => fmt(v) } },
+        dataZoom: zoomRevista(ctx, 12),
+        series: [
+          { name: "Activos castigados", type: "bar", data, color: colorSerie(5), label: { show: etiquetas, position: "top", formatter: (p: { value: number }) => fmt(p.value) } },
+        ],
+      }}
+      alto={300}
+    />
   );
 };
 
@@ -119,6 +155,7 @@ export const Hoja12 = () => {
               alto={348}
             />
           </div>
+          <ActivosCastigados />
         </div>
         <div className="grid grid-cols-2 content-start gap-2">
           <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" indiceColor={7} />

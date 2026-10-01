@@ -1,5 +1,5 @@
 import { archivoEntidad } from "@/services/datosService";
-import { apiEntidades, apiReporte } from "@/services/apiDatos";
+import { apiCuadro, apiEntidades, apiReporte } from "@/services/apiDatos";
 import { aFilasReporte } from "@/services/adaptadores";
 import type { FilaReporte } from "./datos";
 import { agregarDerivados } from "./derivados";
@@ -36,6 +36,9 @@ export const cargarListaEntidades = async (): Promise<EntidadLista[]> =>
 /** Reporte completo de la entidad (cuadro REP01) en la forma ancha de siempre, con los indicadores derivados. */
 export const cargarReporte = async (entidad: string): Promise<FilaReporte[]> =>
   agregarDerivados(aFilasReporte(await apiReporte(archivoEntidad(entidad))));
+
+/** Balance en arbol CUC de la entidad (`EFI06`, saldos). La API cachea la peticion: auditoria y castigos la comparten. */
+export const cargarBalanceEFI06 = (entidad: string) => apiCuadro("EFI06", { entidad: archivoEntidad(entidad), analisis: "saldo" });
 
 export const infoDe = (filas: FilaReporte[]) => ({
   tamano: String(filas[0]?.Tamaño ?? DESCONOCIDO),

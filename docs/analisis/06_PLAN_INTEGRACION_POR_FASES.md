@@ -300,4 +300,10 @@ Verificación: `pnpm typecheck` y `pnpm lint` sin errores (los 23 avisos ya exis
 - La rama parte de `feature/consumo-api` (front conectado a BackendDF + trabajo en curso), que no está en `origin/main`: el PR de esta rama incluye esos commits.
 - Hojas nuevas (32–36) agregadas al final del índice; el orden de lectura lo dan las secciones.
 
+### 9.3 Seguimiento en GitHub
+
+Cada ítem de las fases 2 a 6 tiene su issue en `paulIDCE/Frontend-DF`: #2–#34, más las épicas #35–#39. Hay un milestone y una etiqueta por fase, y etiquetas de área (`backend`, `frontend`, `datos`, `negocio`).
+
+La información nueva, sobre todo la que viene del backend, se registra en los issues con la skill `actualizar-issues` (`.claude/skills/actualizar-issues/`). Los hooks de `.claude/settings.json` la exigen al editar el contrato, la capa de API o este plan, y cuando el mensaje trae novedades del backend, de datos o de negocio.
+
 **Siguiente:** Fase 2 (rama `feature/fase-2-backend-calculos`), empezando por `GET /api/benchmarks` (2.1) y `GET /api/sistema/indicador` (2.2), que reemplazan los cálculos provisionales de grupo par y Monitor de esta fase.

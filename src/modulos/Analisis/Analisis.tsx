@@ -20,6 +20,7 @@ import { archivoEntidad } from "@/services/datosService";
 import { apiEntidad, apiMeta } from "@/services/apiDatos";
 import { cargarListaEntidades } from "./resumenEntidades";
 import Revista from "./Revista";
+import { legible } from "./texto";
 import { HOJAS } from "./paginas";
 
 /**
@@ -176,7 +177,7 @@ const Analisis = () => {
                 <r.icono />
               </span>
               <div>
-                <h4 className="m-0 text-cuerpo font-semibold text-tinta">{r.titulo}</h4>
+                <h4 className="m-0 text-cuerpo font-semibold text-tinta">{legible(r.titulo)}</h4>
                 <p className="m-0 text-detalle text-tinta-tenue">{r.texto}</p>
               </div>
             </button>

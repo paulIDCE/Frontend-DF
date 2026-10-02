@@ -41,7 +41,7 @@ import type { UnidadCelda } from "./unidades";
 export const CabeceraPagina = ({ titulo, subtitulo }: { titulo: string; subtitulo?: string }) => (
   <header className="mb-4 border-b border-linea pb-2">
     <h2 className="m-0 text-titulo font-semibold text-identidad">{legible(titulo)}</h2>
-    {subtitulo && <p className="m-0 text-detalle text-tinta-tenue">{subtitulo}</p>}
+    {subtitulo && <p className="m-0 text-detalle text-tinta-tenue">{legible(subtitulo)}</p>}
   </header>
 );
 

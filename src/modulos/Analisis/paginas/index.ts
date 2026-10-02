@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { legible } from "../texto";
 import { Hoja1, Hoja2 } from "./balance";
 import { Hoja3, Hoja4, Hoja6, Hoja7, Hoja8 } from "./estructuras";
 import { Hoja5, Hoja9, Hoja24, Hoja25, Hoja26 } from "./rankings";
@@ -29,7 +30,8 @@ export interface Hoja {
   Componente: ComponentType;
 }
 
-const h = (numero: number, nombre: string, Componente: ComponentType): Hoja => ({ numero, nombre, Componente });
+/** El nombre en tipo oracion, como los titulos de las hojas (`legible`). */
+const h = (numero: number, nombre: string, Componente: ComponentType): Hoja => ({ numero, nombre: legible(nombre), Componente });
 
 export const HOJAS: Hoja[] = [
   h(1, "Balance General", Hoja1),

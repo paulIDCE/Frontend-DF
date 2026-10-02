@@ -16,6 +16,7 @@ import {
 import { apiSeriesSistema } from "@/services/apiDatos";
 import { aFilasSistema } from "@/services/adaptadores";
 import { useRevista } from "../RevistaContext";
+import { legible } from "../texto";
 import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, zoomRevista, type Dato } from "../datos";
 import { colorSerie, opcionComparativoAnual, ejeValor, tooltipSerie } from "../opciones";
@@ -134,7 +135,7 @@ export const Hoja1 = () => {
         </section>
 
         {impresion ? null : (
-          cuentaActiva && grafica(cuentaActiva.code, `Comparativo anual · ${cuentaActiva.name}`)
+          cuentaActiva && grafica(cuentaActiva.code, `Comparativo anual · ${legible(cuentaActiva.name).toLowerCase()}`)
         )}
       </div>
 

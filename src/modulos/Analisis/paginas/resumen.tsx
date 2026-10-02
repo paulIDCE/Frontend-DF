@@ -75,7 +75,7 @@ export const HojaResumen = () => {
 
   return (
     <>
-      <CabeceraPagina titulo={`RESUMEN EJECUTIVO - ${entidad}`} subtitulo={`${tamano} · datos al ${fechaCorta(ctx.fecha)} · variaciones anuales`} />
+      <CabeceraPagina titulo={`Resumen ejecutivo - ${entidad}`} subtitulo={`${tamano} · datos al ${fechaCorta(ctx.fecha)} · variaciones anuales`} />
       <FilaKpis columnas={4} className="mb-3">
         {KPIS.map(([code, titulo]) => (
           <KpiBox key={code} titulo={titulo} code={code} grupoPar={code !== "Gan_Eje"} />

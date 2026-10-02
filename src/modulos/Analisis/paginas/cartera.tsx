@@ -100,7 +100,7 @@ export const Hoja12 = () => {
       />
       <div className="mb-3 flex flex-wrap gap-3">
         {["IF011", "@14", "IF007", "IF009", "IF008"].map((code, i) => (
-          <KpiBox key={code} titulo={KPIS_CARTERA[i]} code={code} />
+          <KpiBox key={code} titulo={KPIS_CARTERA[i]} code={code} grupoPar={code === "IF011"} />
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -158,9 +158,9 @@ export const Hoja12 = () => {
           <ActivosCastigados />
         </div>
         <div className="grid grid-cols-2 content-start gap-2">
-          <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" indiceColor={7} />
+          <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" indiceColor={7} grupoPar />
           <MiniKpi titulo="CASTIGOS (PERLAS P4)" code="P4_Castigados" tipo="line" indiceColor={5} />
-          <MiniKpi titulo="REND. CART. TOTAL" code="SB036" tipo="line" indiceColor={0} />
+          <MiniKpi titulo="REND. CART. TOTAL" code="SB036" tipo="line" indiceColor={0} grupoPar />
           <MiniKpi titulo="REND. CART. PRODUCTIVO" code="SB037" tipo="bar" indiceColor={2} />
           <MiniKpi titulo="REND. CART. CONSUMO" code="SB038" tipo="line" indiceColor={3} />
           <MiniKpi titulo="REND. CART. INMOBILIARIO" code="SB039" tipo="bar" indiceColor={6} />

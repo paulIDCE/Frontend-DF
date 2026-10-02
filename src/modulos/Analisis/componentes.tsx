@@ -11,6 +11,7 @@ import { useRevista } from "./RevistaContext";
 import { fechaCorta, fmt, pct, variacion, type Dato } from "./datos";
 import { opcionMini } from "./opciones";
 import { claseVar } from "./estilos";
+import { PosicionGrupo } from "./PosicionGrupo";
 
 /**
  * Piezas visuales comunes de la revista (cabecera, KPIs, tabla de estructura,
@@ -33,7 +34,8 @@ export const Var = ({ v, invertir = false, decimales = 2 }: { v: number; inverti
 );
 
 /** KPI de las hojas de estructura: valor actual + variacion anual. */
-export const KpiBox = ({ titulo, code, sufijo = "" }: { titulo: string; code: string; sufijo?: string }) => {
+/** `grupoPar`: distintivo con el percentil de la entidad en su sector (plan 06, item 1.16). */
+export const KpiBox = ({ titulo, code, sufijo = "", grupoPar = false }: { titulo: string; code: string; sufijo?: string; grupoPar?: boolean }) => {
   const { ctx } = useRevista();
   const d = ctx.dato(code);
   const v = d?.varAnual ?? 0;
@@ -50,6 +52,7 @@ export const KpiBox = ({ titulo, code, sufijo = "" }: { titulo: string; code: st
           {pct(v)}
         </span>
         <span className="text-tinta-tenue">{fechaCorta(ctx.fecha)}</span>
+        {grupoPar && <PosicionGrupo code={code} />}
       </span>
     </div>
   );
@@ -232,12 +235,15 @@ export const MiniKpi = ({
   tipo,
   indiceColor,
   sufijo = "%",
+  grupoPar = false,
 }: {
   titulo: string;
   code: string;
   tipo: "bar" | "line";
   indiceColor: number;
   sufijo?: string;
+  /** Distintivo con el percentil de la entidad en su sector (plan 06, item 1.16). */
+  grupoPar?: boolean;
 }) => {
   const { ctx, etiquetas } = useRevista();
   const actual = ctx.valor(code);
@@ -246,6 +252,7 @@ export const MiniKpi = ({
   return (
     <div className="flex flex-col rounded-tarjeta border border-linea bg-superficie p-2">
       <div className="flex items-baseline justify-end gap-2">
+        {grupoPar && <span className="mr-auto"><PosicionGrupo code={code} /></span>}
         <span className="text-subtitulo font-extrabold text-identidad">
           {sufijo === "%" ? `${actual.toFixed(2)}%` : fmt(actual)}
         </span>

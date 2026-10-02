@@ -41,3 +41,17 @@ export const ordenarPorIndicador = (r: RankingApi, sentido: Sentido, esRatio = t
   filas.forEach((f, i) => (f.posicion = f.actual === null ? 0 : i + 1));
   return filas;
 };
+
+/**
+ * Percentil favorable de la entidad en su grupo: % de las demas entidades (con dato) a las que
+ * supera segun el sentido del indicador; los empates cuentan la mitad. P100 = la mejor del grupo.
+ */
+export const percentilFavorable = (filas: FilaIndicador[], entidad: string): { percentil: number; n: number } | null => {
+  const propia = filas.find((f) => f.nombre === entidad);
+  const otras = filas.filter((f) => f.nombre !== entidad && f.actual !== null);
+  if (!propia || propia.actual === null || !otras.length) return null;
+  // `filas` ya viene ordenada de mejor a peor: las que estan detras son peores.
+  const peores = otras.filter((f) => f.posicion > propia.posicion && f.actual !== propia.actual).length;
+  const empates = otras.filter((f) => f.actual === propia.actual).length;
+  return { percentil: ((peores + empates / 2) / otras.length) * 100, n: otras.length + 1 };
+};

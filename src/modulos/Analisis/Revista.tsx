@@ -133,123 +133,129 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="sticky top-[76px] z-40 flex flex-wrap items-center gap-3 rounded-contenedor bg-superficie p-3 shadow-contenedor print:hidden">
-        <Button icon={<ArrowLeftOutlined />} onClick={onVolver}>
-          Volver al Hub
-        </Button>
-        <Dropdown
-          disabled={!valor || !!imprimiendo}
-          menu={{
-            items: [
-              { key: "todo", icon: <FileTextOutlined />, label: `Descargar todo (${total} hojas)` },
-              { key: "actual", icon: <FileOutlined />, label: `Descargar página actual (${pagina})` },
-            ],
-            onClick: ({ key }) => setImprimiendo(key as Impresion),
-          }}
-        >
-          <Button danger icon={<FilePdfOutlined />} loading={!!imprimiendo}>
-            {imprimiendo ? "Preparando PDF…" : "Descargar PDF"} <DownOutlined />
+      {/* Barra fija: controles de la revista y, debajo, la navegacion entre hojas, siempre a mano. */}
+      <div
+        className="sticky z-40 flex flex-col gap-2 rounded-contenedor bg-superficie p-3 shadow-contenedor print:hidden"
+        // Justo bajo el encabezado de la app, que publica su alto (`AppShell`).
+        style={{ top: "var(--alto-encabezado, 76px)" }}
+      >
+        <div className="flex flex-wrap items-center gap-3">
+          <Button icon={<ArrowLeftOutlined />} onClick={onVolver}>
+            Volver al Hub
           </Button>
-        </Dropdown>
-        <label className="flex items-center gap-2 text-detalle text-tinta-secundaria">
-          <Switch size="small" checked={etiquetas} onChange={setEtiquetas} />
-          Mostrar valores en gráficos
-        </label>
-        <div className="ml-auto flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-1 text-detalle">
-            Año:
-            <Select
-              size="small"
-              className="w-24"
-              value={anio}
-              options={anios.map((a) => ({ value: a, label: a }))}
-              onChange={(a: string) => {
-                const mismoMes = `${a}-${mes}`;
-                setFecha(fechas.includes(mismoMes) ? mismoMes : (fechas.filter((f) => f.startsWith(a)).pop() ?? mismoMes));
-              }}
-            />
+          <Dropdown
+            disabled={!valor || !!imprimiendo}
+            menu={{
+              items: [
+                { key: "todo", icon: <FileTextOutlined />, label: `Descargar todo (${total} hojas)` },
+                { key: "actual", icon: <FileOutlined />, label: `Descargar página actual (${pagina})` },
+              ],
+              onClick: ({ key }) => setImprimiendo(key as Impresion),
+            }}
+          >
+            <Button danger icon={<FilePdfOutlined />} loading={!!imprimiendo}>
+              {imprimiendo ? "Preparando PDF…" : "Descargar PDF"} <DownOutlined />
+            </Button>
+          </Dropdown>
+          <label className="flex items-center gap-2 text-detalle text-tinta-secundaria">
+            <Switch size="small" checked={etiquetas} onChange={setEtiquetas} />
+            Mostrar valores en gráficos
           </label>
-          <label className="flex items-center gap-1 text-detalle">
-            Mes:
-            <Select
-              size="small"
-              className="w-24"
-              value={mes}
-              options={MESES.map((m, i) => {
-                const v = String(i + 1).padStart(2, "0");
-                return { value: v, label: m, disabled: !fechas.includes(`${anio}-${v}`) };
-              })}
-              onChange={(m: string) => setFecha(`${anio}-${m}`)}
-            />
-          </label>
-          <label className="flex items-center gap-1 text-detalle">
-            Entidad:
-            <Select
-              size="small"
-              className="w-64"
-              showSearch
-              value={entidad}
-              options={(lista ?? []).map((e) => ({ value: e.nombre, label: e.nombre }))}
-              onChange={onEntidad}
-              notFoundContent="No se encontró"
-            />
-          </label>
-          {valor && (
-            <span className="flex gap-3 rounded-tarjeta bg-superficie-hundida px-2 py-1 text-rotulo">
-              <span>
-                Tamaño: <strong>{valor.tamano}</strong>
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1 text-detalle">
+              Año:
+              <Select
+                size="small"
+                className="w-24"
+                value={anio}
+                options={anios.map((a) => ({ value: a, label: a }))}
+                onChange={(a: string) => {
+                  const mismoMes = `${a}-${mes}`;
+                  setFecha(fechas.includes(mismoMes) ? mismoMes : (fechas.filter((f) => f.startsWith(a)).pop() ?? mismoMes));
+                }}
+              />
+            </label>
+            <label className="flex items-center gap-1 text-detalle">
+              Mes:
+              <Select
+                size="small"
+                className="w-24"
+                value={mes}
+                options={MESES.map((m, i) => {
+                  const v = String(i + 1).padStart(2, "0");
+                  return { value: v, label: m, disabled: !fechas.includes(`${anio}-${v}`) };
+                })}
+                onChange={(m: string) => setFecha(`${anio}-${m}`)}
+              />
+            </label>
+            <label className="flex items-center gap-1 text-detalle">
+              Entidad:
+              <Select
+                size="small"
+                className="w-64"
+                showSearch
+                value={entidad}
+                options={(lista ?? []).map((e) => ({ value: e.nombre, label: e.nombre }))}
+                onChange={onEntidad}
+                notFoundContent="No se encontró"
+              />
+            </label>
+            {valor && (
+              <span className="flex gap-3 rounded-tarjeta bg-superficie-hundida px-2 py-1 text-rotulo">
+                <span>
+                  Tamaño: <strong>{valor.tamano}</strong>
+                </span>
+                <span>
+                  Nivel: <strong>{valor.rango}</strong>
+                </span>
               </span>
-              <span>
-                Nivel: <strong>{valor.rango}</strong>
-              </span>
-            </span>
-          )}
+            )}
+          </div>
         </div>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-center gap-2 print:hidden">
-        <Tooltip title="Primera">
-          <Button size="small" icon={<DoubleLeftOutlined />} onClick={() => irA(0)} disabled={pos === 0} />
-        </Tooltip>
-        <Button size="small" icon={<LeftOutlined />} onClick={() => irA(pos - 1)} disabled={pos === 0} />
-        <Select
-          size="small"
-          className="w-80"
-          value={HOJAS_ORDENADAS[pos].numero}
-          options={SECCIONES.map((s) => ({
-            label: s.titulo,
-            options: s.hojas.map((n) => ({
-              value: n,
-              label: `${HOJAS_ORDENADAS.findIndex((x) => x.numero === n) + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`,
-            })),
-          }))}
-          onChange={onPagina}
-        />
-        <span className="text-detalle text-tinta-tenue">
-          {pos + 1} de {total} · {seccionDe(reunida)}
-        </span>
-        <Button size="small" icon={<RightOutlined />} onClick={() => irA(pos + 1)} disabled={pos === total - 1} />
-        <Tooltip title="Última">
-          <Button size="small" icon={<DoubleRightOutlined />} onClick={() => irA(total - 1)} disabled={pos === total - 1} />
-        </Tooltip>
-      </div>
-      <div className="flex flex-wrap justify-center gap-1 print:hidden">
-        {SECCIONES.map((s) => (
-          <span key={s.titulo} className="flex gap-1 pr-2" title={s.titulo}>
-            {s.hojas.map((n) => {
-              const i = HOJAS_ORDENADAS.findIndex((x) => x.numero === n);
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  title={`${s.titulo} · ${i + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`}
-                  onClick={() => irA(i)}
-                  className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${i === pos ? "bg-accion" : "bg-linea-fuerte"}`}
-                />
-              );
-            })}
+        <nav aria-label="Hojas de la revista" className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-linea pt-2">
+          <Tooltip title="Primera">
+            <Button size="small" icon={<DoubleLeftOutlined />} onClick={() => irA(0)} disabled={pos === 0} />
+          </Tooltip>
+          <Button size="small" icon={<LeftOutlined />} onClick={() => irA(pos - 1)} disabled={pos === 0} />
+          <Select
+            size="small"
+            className="w-80"
+            value={HOJAS_ORDENADAS[pos].numero}
+            options={SECCIONES.map((s) => ({
+              label: s.titulo,
+              options: s.hojas.map((n) => ({
+                value: n,
+                label: `${HOJAS_ORDENADAS.findIndex((x) => x.numero === n) + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`,
+              })),
+            }))}
+            onChange={onPagina}
+          />
+          <span className="text-detalle text-tinta-tenue">
+            {pos + 1} de {total} · {seccionDe(reunida)}
           </span>
-        ))}
+          <Button size="small" icon={<RightOutlined />} onClick={() => irA(pos + 1)} disabled={pos === total - 1} />
+          <Tooltip title="Última">
+            <Button size="small" icon={<DoubleRightOutlined />} onClick={() => irA(total - 1)} disabled={pos === total - 1} />
+          </Tooltip>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
+            {SECCIONES.map((s) => (
+              <span key={s.titulo} className="flex gap-1 pr-2" title={s.titulo}>
+                {s.hojas.map((n) => {
+                  const i = HOJAS_ORDENADAS.findIndex((x) => x.numero === n);
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      title={`${s.titulo} · ${i + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`}
+                      onClick={() => irA(i)}
+                      className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${i === pos ? "bg-accion" : "bg-linea-fuerte"}`}
+                    />
+                  );
+                })}
+              </span>
+            ))}
+          </div>
+        </nav>
       </div>
 
       {apiError ? (

@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button, Spin } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
@@ -20,9 +20,32 @@ const LoadingFallback = () => (
   </div>
 );
 
+/**
+ * Publica el alto del encabezado en la variable CSS `--alto-encabezado` (en `:root`): las barras
+ * fijas de las pantallas (p. ej. la de la revista) se pegan justo debajo. El encabezado crece
+ * cuando el menu se envuelve en pantallas angostas, asi que se mide en vivo.
+ */
+const usePublicarAlto = () => {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const publicar = () => document.documentElement.style.setProperty("--alto-encabezado", `${Math.round(el.getBoundingClientRect().height)}px`);
+    publicar();
+    const observador = new ResizeObserver(publicar);
+    observador.observe(el);
+    return () => {
+      observador.disconnect();
+      document.documentElement.style.removeProperty("--alto-encabezado");
+    };
+  }, []);
+  return ref;
+};
+
 const Header = () => {
   const { username, signOut } = useAuth();
   const navigate = useNavigate();
+  const ref = usePublicarAlto();
 
   const salir = async () => {
     await signOut();
@@ -30,7 +53,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
+    <header ref={ref} className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
       <div className="flex items-center gap-3">
         <img src="/images/imgdatalux2.png" alt="Data Financiero" className="w-14 h-auto" />
         <div className="flex flex-col">

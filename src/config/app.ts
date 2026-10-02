@@ -18,6 +18,7 @@ export const PANTALLAS = [
   { ruta: "/dashboard", titulo: "Home" },
   { ruta: "/macro", titulo: "Entorno Macroeconómico" },
   { ruta: "/sistema", titulo: "Sistema Financiero" },
+  { ruta: "/monitor", titulo: "Monitor del Sistema" },
   { ruta: "/tasas", titulo: "Tasas de Interés" },
   { ruta: "/analisis", titulo: "Análisis Financiero" },
 ] as const;

@@ -1,4 +1,5 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Select, Spin } from "antd";
 import {
   AppstoreOutlined,
@@ -19,6 +20,7 @@ import { archivoEntidad } from "@/services/datosService";
 import { apiEntidad, apiMeta } from "@/services/apiDatos";
 import { cargarListaEntidades } from "./resumenEntidades";
 import Revista from "./Revista";
+import { HOJAS } from "./paginas";
 
 /**
  * Análisis Financiero — hub de reportes + revista digital (porte de prueba-data
@@ -59,15 +61,41 @@ const fmtVersion = (iso: string) =>
     hour12: true,
   });
 
+/**
+ * La entidad y la hoja abierta van en la URL (`?entidad=BP.%20AMAZONAS&hoja=27`): se pueden
+ * compartir, el boton "atras" del navegador vuelve a la hoja anterior y otras pantallas (Monitor
+ * del Sistema) abren la revista de una entidad. Plan 06, items 1.17 y 1.20.
+ */
+const useEstadoUrl = () => {
+  const [params, setParams] = useSearchParams();
+  const entidad = params.get("entidad") || ENTIDAD_INICIAL;
+  const hoja = Number(params.get("hoja"));
+  const revista = Number.isInteger(hoja) && hoja >= 1 && hoja <= HOJAS.length ? hoja : null;
+  const cambiar = useCallback(
+    (cambios: Record<string, string | null>, reemplazar = false) =>
+      setParams(
+        (p) => {
+          const n = new URLSearchParams(p);
+          Object.entries(cambios).forEach(([k, v]) => (v === null ? n.delete(k) : n.set(k, v)));
+          return n;
+        },
+        { replace: reemplazar },
+      ),
+    [setParams],
+  );
+  const setEntidad = useCallback((e: string) => cambiar({ entidad: e }, true), [cambiar]);
+  const setRevista = useCallback((n: number | null) => cambiar({ hoja: n === null ? null : String(n) }), [cambiar]);
+  return { entidad, revista, setEntidad, setRevista };
+};
+
 const Analisis = () => {
-  const [entidad, setEntidad] = useState(ENTIDAD_INICIAL);
-  const [revista, setRevista] = useState<number | null>(null);
+  const { entidad, revista, setEntidad, setRevista } = useEstadoUrl();
 
   const { data: lista } = useService(cargarListaEntidades, [], [], true, "No se pudo cargar la lista de entidades");
   const { data: info, isLoading: cargandoInfo } = useService(cargarInfo, [entidad], [], true, "No se pudo cargar la entidad");
   const { data: meta } = useService(apiMeta, [], [], true, "No se pudo obtener la fecha de los datos");
 
-  const volver = useCallback(() => setRevista(null), []);
+  const volver = useCallback(() => setRevista(null), [setRevista]);
 
   if (revista !== null) {
     return <Revista entidad={entidad} pagina={revista} onPagina={setRevista} onEntidad={setEntidad} onVolver={volver} />;

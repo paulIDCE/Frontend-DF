@@ -23,6 +23,7 @@ import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores"
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
 import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
 import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
+import { calificacion } from "../calificacion";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -263,17 +264,6 @@ export const Hoja30 = () => (
 );
 
 /* ------------------------------ Hoja 28 ------------------------------ */
-
-const calificacion = (v: number) =>
-  v >= 80
-    ? { letra: "A", texto: "A - Excelente", clase: "bg-exito" }
-    : v >= 60
-      ? { letra: "B", texto: "B - Muy Bueno", clase: "bg-accion" }
-      : v >= 50
-        ? { letra: "C", texto: "C - Saludable", clase: "bg-advertencia" }
-        : v >= 40
-          ? { letra: "D", texto: "D - Regular", clase: "bg-pdf" }
-          : { letra: "E", texto: "E - Alto Riesgo", clase: "bg-error" };
 
 const LEYENDA = [
   ["A", "Excelente (≥80%)"],

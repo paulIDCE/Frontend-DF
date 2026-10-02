@@ -46,7 +46,7 @@ export const KpiBox = ({ titulo, code, sufijo = "", grupoPar = false }: { titulo
         {fmt(d?.actual ?? 0)}
         {sufijo}
       </span>
-      <span className="flex gap-2 text-detalle">
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-detalle">
         <span className={`font-semibold ${claseVar(v)}`}>
           {v >= 0 ? "+" : ""}
           {pct(v)}

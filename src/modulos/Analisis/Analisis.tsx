@@ -34,6 +34,7 @@ import { HOJAS } from "./paginas";
 const ENTIDAD_INICIAL = "BP. AMAZONAS";
 
 const REPORTES = [
+  { tipo: "resumen", pagina: 36, icono: BulbOutlined, titulo: "Resumen Ejecutivo", texto: "KPIs, grupo par, calificaciones y hallazgos principales", oscuro: false },
   { tipo: "balances", pagina: 1, icono: SettingOutlined, titulo: "Balances Financieros: Principales Cuentas", texto: "Reporte detallado de los balances financieros", oscuro: true },
   { tipo: "intermediacion", pagina: 12, icono: DatabaseOutlined, titulo: "Intermediación Financiera", texto: "Análisis de colocaciones y captaciones", oscuro: false },
   { tipo: "indicadores", pagina: 27, icono: FileTextOutlined, titulo: "Indicadores Financieros", texto: "Métricas clave", oscuro: true },

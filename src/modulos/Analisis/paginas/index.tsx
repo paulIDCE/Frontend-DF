@@ -10,6 +10,7 @@ import { HojaTendencias } from "./tendencias";
 import { HojaAuditoria } from "./auditoria";
 import { HojaFuentesUsos } from "./fuentesUsos";
 import { HojaRankingIndicador } from "./rankingIndicador";
+import { HojaResumen } from "./resumen";
 
 /** Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`). */
 
@@ -58,4 +59,5 @@ export const HOJAS: Hoja[] = [
   h(33, "Auditoría de desviaciones", HojaAuditoria),
   h(34, "Fuentes y Usos", HojaFuentesUsos),
   h(35, "Ranking por Indicador", HojaRankingIndicador),
+  h(36, "Resumen Ejecutivo", HojaResumen),
 ];

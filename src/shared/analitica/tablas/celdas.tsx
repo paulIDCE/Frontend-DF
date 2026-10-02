@@ -63,6 +63,62 @@ export const CeldaSaldoVariacion = ({
   </div>
 );
 
+/** Variacion en puntos (pp) con flecha, para la segunda linea de celdas de indicadores (%, indices). */
+const VariacionPuntos = ({
+  valor,
+  etiqueta,
+  subirEsMalo,
+  formato,
+}: {
+  valor: number | null | undefined;
+  etiqueta: "M" | "A";
+  subirEsMalo: boolean;
+  formato: (v: number) => string;
+}) => {
+  if (valor === null || valor === undefined || Number.isNaN(valor)) return null;
+  const favorable = subirEsMalo ? valor < 0 : valor > 0;
+  const color = valor === 0 ? "text-tinta-tenue" : favorable ? "text-exito" : "text-error";
+  return (
+    <Tooltip title={etiqueta === "M" ? "Variación mensual (puntos)" : "Variación anual (puntos)"}>
+      <span className={`whitespace-nowrap ${color}`}>
+        {etiqueta} {valor > 0 ? "▲" : valor < 0 ? "▼" : ""}
+        {formato(Math.abs(valor))} pp
+      </span>
+    </Tooltip>
+  );
+};
+
+/**
+ * Como `CeldaSaldoVariacion`, para indicadores que ya son porcentajes o indices (CAMELS, PERLAS,
+ * morosidad…): el valor y debajo sus variaciones mensual (M) y anual (A) en PUNTOS, no relativas.
+ * `formato` da el valor (por defecto `fmtPct`) y `formatoVariacion` los puntos.
+ */
+export const CeldaIndicadorVariacion = ({
+  valor,
+  mensual,
+  anual,
+  subirEsMalo = false,
+  formato = (v: number) => fmtPct(v),
+  formatoVariacion = (v: number) => v.toFixed(2),
+}: {
+  valor: number | null | undefined;
+  /** Diferencia en puntos contra el mes anterior. */
+  mensual: number | null | undefined;
+  /** Diferencia en puntos contra el mismo mes del año anterior. */
+  anual: number | null | undefined;
+  subirEsMalo?: boolean;
+  formato?: (v: number) => string;
+  formatoVariacion?: (v: number) => string;
+}) => (
+  <div className="leading-tight text-right">
+    <div className="font-mono text-detalle whitespace-nowrap">{valor === null || valor === undefined ? "—" : formato(valor)}</div>
+    <div className="text-rotulo flex gap-2 justify-end">
+      <VariacionPuntos valor={mensual} etiqueta="M" subirEsMalo={subirEsMalo} formato={formatoVariacion} />
+      <VariacionPuntos valor={anual} etiqueta="A" subirEsMalo={subirEsMalo} formato={formatoVariacion} />
+    </div>
+  </div>
+);
+
 /**
  * Valor en porcentaje pintado con el color de su nivel de riesgo. Con `niveles` vacio se muestra
  * el valor plano (p. ej. la columna de un indicador que no es el activo).

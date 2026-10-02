@@ -1,10 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Checkbox, Segmented, Select, Spin, Tabs } from "antd";
 import {
+  CLASE_COLUMNA_ACTIVA,
+  CeldaIndicadorVariacion,
   FranjaSelectores,
   TEXTO_GRAFICA,
   TablaAnalitica,
   TabsAnaliticas,
+  TituloAyuda,
   arbolPorNivel,
   color,
   conAlfa,
@@ -15,7 +18,6 @@ import {
 } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
-import { claseVar } from "../estilos";
 import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
 import { colorSerie, opcionHistorico } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
@@ -25,6 +27,7 @@ import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
 import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
 import { calificacion } from "../calificacion";
 import { legible } from "../texto";
+import { sentidoDe } from "../catalogoIndicadores";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -357,11 +360,6 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
     { titulo: "Var. Mensual (pp)", valor: vm, ancho: 14 },
     { titulo: "Var. Anual (pp)", valor: va, ancho: 14 },
   ];
-  const pp = (v: number) => (
-    <span className={claseVar(v)}>
-      {dec(v)} pp {v > 0 ? "▲" : v < 0 ? "▼" : "─"}
-    </span>
-  );
   return (
     <TablaAnalitica<FilaIndicador>
       rowKey="code"
@@ -372,13 +370,26 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
       excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content", y: 460 }}
       columns={[
-        { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : ""}>{legible(r.nombre)}</span> },
-        { title: "Meta", render: (_, r) => r.meta },
-        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.anioAnterior)) },
-        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.mesAnterior)) },
-        { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(ctx.valor(r.code))}</strong> },
-        { title: "Var. Mensual", align: "right", render: (_, r) => pp(vm(r)) },
-        { title: "Var. Anual", align: "right", render: (_, r) => pp(va(r)) },
+        { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : "text-tinta"}>{legible(r.nombre)}</span> },
+        { title: "Meta", render: (_, r) => <span className="text-detalle text-tinta-secundaria">{r.meta}</span> },
+        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <span className="font-mono text-detalle">{fmt(ctx.valor(r.code, ctx.anioAnterior))}</span> },
+        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => <span className="font-mono text-detalle">{fmt(ctx.valor(r.code, ctx.mesAnterior))}</span> },
+        {
+          // Como la hoja 1 y la PyG: el valor del corte lleva debajo sus variaciones M y A, en puntos.
+          title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación mensual (M) y anual (A) en puntos" />,
+          align: "right",
+          onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+          render: (_, r) => (
+            <CeldaIndicadorVariacion
+              valor={ctx.valor(r.code)}
+              mensual={vm(r)}
+              anual={va(r)}
+              subirEsMalo={sentidoDe(r.code) === "baja"}
+              formato={fmt}
+              formatoVariacion={(v) => dec(v)}
+            />
+          ),
+        },
       ]}
     />
   );

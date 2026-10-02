@@ -114,9 +114,15 @@ export const indicador = (code: string): IndicadorCatalogo | undefined => POR_CO
  * Cuentas donde subir es desfavorable (gastos, cartera en mora, activos improductivos): colorean las
  * variaciones de los KPIs. Patrones sobre el CUC, con o sin sufijo anualizado (`A`) o de segmento.
  */
+/**
+ * Componentes CAMELS que son ratios donde menor es mejor (los PERLAS `S_*_acum` son puntajes: mayor
+ * es mejor). PROVISIONAL hasta el catalogo de indicadores (item 3.1).
+ */
+const CAMELS_BAJA = new Set(["C3", "PORCE_ACTIV_IMPRO", "A3_CALID_CREDI", "M1_GRADO_ABSOR_MARGE_FINAN", "EFICI_OPERA", "IVF_CUANTITATIVO"]);
+
 const CUENTAS_BAJA = [/^@4\d*A?$/, /^IF00[89](_\d)?$/, /^IF01[02](_\d)?$/, /^SB00[34]$/, /^SB018A$/];
 
 export const sentidoDe = (code: string): Sentido =>
   indicador(code)?.sentido ??
   SENTIDO_DERIVADOS[code.toUpperCase()] ??
-  (CUENTAS_BAJA.some((re) => re.test(code.toUpperCase())) ? "baja" : "sube");
+  (CAMELS_BAJA.has(code.toUpperCase()) || CUENTAS_BAJA.some((re) => re.test(code.toUpperCase())) ? "baja" : "sube");

@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
 import { Radio, Spin, Table } from "antd";
-import { KpiCard, TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
+import { CLASE_COLUMNA_ACTIVA, KpiCard, TablaAnalitica, TituloAyuda, color, useService, type ColumnaExcel } from "@idce/kit";
 import { archivoEntidad } from "@/services/datosService";
 import { apiRanking } from "@/services/apiDatos";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, TituloBloque, useNombreDescarga } from "../componentes";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, TituloBloque, useNombreDescarga } from "../componentes";
+import type { UnidadCelda } from "../unidades";
 import { legible } from "../texto";
 import { TrophyOutlined } from "@ant-design/icons";
-import { claseVar } from "../estilos";
 import { fechaCorta, fmt, pct, variacion } from "../datos";
 import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
 
@@ -34,6 +34,10 @@ type Filtro = "sector" | "activos" | "provincia";
 
 const cargarRanking = (cuenta: string, fecha: string, agrupacion: Filtro, entidad: string) =>
   apiRanking({ cuenta, fecha, agrupacion, entidad: archivoEntidad(entidad) });
+
+/** Unidad de las cuentas del resumen: morosidad en %, numero de operaciones, el resto montos. */
+const unidadResumen = (code: string): UnidadCelda =>
+  /^IF012/i.test(code) ? "%" : /^(ope_total|OPTPE)$/i.test(code) ? "numero" : "monto";
 
 const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
   const { ctx, entidad } = useRevista();
@@ -159,16 +163,12 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
               excel={{ nombre: archivoResumen, columnas: excelResumen }}
               columns={[
                 { title: "Cuenta", render: (_, r) => <span className="font-semibold">{legible(r.name)}</span> },
-                { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(r.anterior) },
-                { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(r.actual)}</strong> },
+                { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} unidad={unidadResumen(r.code)} /> },
                 {
-                  title: "Variación",
+                  title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación anual (A)" />,
                   align: "right",
-                  render: (_, r) => (
-                    <span className={claseVar(r.variacion)}>
-                      {pct(r.variacion, 1)} {r.variacion > 0 ? "▲" : r.variacion < 0 ? "▼" : "─"}
-                    </span>
-                  ),
+                  onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                  render: (_, r) => <CeldaValor code={r.code} unidad={unidadResumen(r.code)} valor={r.actual} anterior={r.anterior} />,
                 },
               ]}
             />
@@ -196,18 +196,28 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
                   <strong>TOTAL</strong>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={2} align="right">{fmt(totales.anterior)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="right">100.00%</Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">{pct(100)}</Table.Summary.Cell>
                 <Table.Summary.Cell index={4} align="right">{fmt(totales.actual)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">100.00%</Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="right">{pct(100)}</Table.Summary.Cell>
               </Table.Summary.Row>
             )}
             columns={[
               { title: "Posición", dataIndex: "posicion", width: 80, align: "center" },
               { title: "Entidad", dataIndex: "entidad" },
-              { title: `${c.nombre} ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => fmt(r.anterior) },
-              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => pct(r.partAnterior) },
-              { title: `${c.nombre} ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => fmt(r.actual) },
-              { title: `Part. ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => pct(r.partActual) },
+              { title: `${legible(c.nombre)} ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} /> },
+              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => <CeldaNumero valor={r.partAnterior} unidad="%" /> },
+              {
+                title: <TituloAyuda titulo={`${legible(c.nombre)} ${fechaCorta(ctx.fecha)}`} ayuda="Valor del corte con su variación anual (A)" />,
+                align: "right",
+                onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                render: (_, r) => <CeldaValor code={c.cuenta} unidad="monto" valor={r.actual} anterior={r.anterior} />,
+              },
+              {
+                title: <TituloAyuda titulo={`Part. ${fechaCorta(ctx.fecha)}`} ayuda="Participación del corte con su cambio anual (A) en puntos" />,
+                align: "right",
+                onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                render: (_, r) => <CeldaValor code={c.cuenta} unidad="%" valor={r.partActual} anterior={r.partAnterior} />,
+              },
             ]}
           />
         )}

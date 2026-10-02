@@ -1,6 +1,6 @@
-import { FilaKpis, TablaAnalitica } from "@idce/kit";
+import { CLASE_COLUMNA_ACTIVA, FilaKpis, TablaAnalitica, TituloAyuda } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, useNombreDescarga, type CuentaTabla } from "../componentes";
+import { CabeceraPagina, CeldaNumero, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, useNombreDescarga, type CuentaTabla } from "../componentes";
 import { fechaCorta, fmt, dec } from "../datos";
 import { claseVar } from "../estilos";
 import { opcionCascada, opcionComparativoAnual, opcionHistorico, type PasoCascada } from "../opciones";
@@ -95,9 +95,19 @@ const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
       }}
       columns={[
         { title: "Ratios de evolución", key: "n", render: (_, r) => <span className="font-medium">{r.nombre}</span> },
-        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => fmt(r.anterior) },
-        { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => <strong>{fmt(r.actual)}</strong> },
-        { title: "Actual / anterior", key: "r", align: "right", render: (_, r) => ratio(r) },
+        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} /> },
+        {
+          title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Acumulado del corte con su ratio de evolución (actual / mismo mes del año anterior)" />,
+          key: "c",
+          align: "right",
+          onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+          render: (_, r) => (
+            <div className="leading-tight text-right">
+              <CeldaNumero valor={r.actual} />
+              <div className="text-rotulo">{ratio(r)}</div>
+            </div>
+          ),
+        },
       ]}
     />
   );

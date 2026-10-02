@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { Radio, Segmented, Select, Spin } from "antd";
-import { EstadoError, FranjaSelectores, TEXTO_GRAFICA, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
+import { CLASE_COLUMNA_ACTIVA, EstadoError, FranjaSelectores, TEXTO_GRAFICA, TablaAnalitica, TituloAyuda, useService, type ColumnaExcel } from "@idce/kit";
 import { apiRanking } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
 import type { Agrupacion } from "@/types/api";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
-import { claseVar } from "../estilos";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, variacion, pct } from "../datos";
 import { GRUPOS_INDICADORES, type IndicadorCatalogo } from "../catalogoIndicadores";
 import { ordenarPorIndicador, type FilaIndicador } from "../grupoPar";
@@ -68,8 +67,6 @@ export const HojaRankingIndicador = () => {
 
   const cambio = (f: FilaIndicador) =>
     f.actual === null || f.anterior === null ? null : esRatio ? f.actual - f.anterior : variacion(f.actual, f.anterior);
-  /** Color de la variacion segun el sentido: en "menor es mejor", bajar es verde. */
-  const claseCambio = (v: number) => claseVar(ind.sentido === "sube" ? v : -v);
 
   const excel: ColumnaExcel<FilaIndicador>[] = [
     { titulo: "Posición", valor: (r) => r.posicion || "", formato: "entero", ancho: 10 },
@@ -147,21 +144,29 @@ export const HojaRankingIndicador = () => {
             dataSource={filas}
             excel={{ nombre, columnas: excel }}
             scroll={{ x: "max-content", y: 560 }}
-            rowClassName={(r) => (r.nombre === entidad ? "font-bold bg-advertencia-sutil" : "")}
+            rowClassName={(r) => (r.nombre === entidad ? "font-semibold" : "")}
             onRow={(r) => ({ onDoubleClick: () => setEntidad(r.nombre), title: "Doble clic: abrir la revista de esta entidad" })}
             columns={[
               { title: "#", key: "p", width: 56, align: "center", render: (_, r) => r.posicion || "-" },
               { title: "Entidad", key: "e", render: (_, r) => r.nombre },
-              { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => (r.anterior === null ? "-" : fmt(r.anterior)) },
-              { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => (r.actual === null ? "-" : <strong>{fmt(r.actual)}</strong>) },
               {
-                title: esRatio ? "Var. (pp)" : "Var. (%)",
-                key: "v",
+                title: fechaCorta(ctx.anioAnterior),
+                key: "a",
                 align: "right",
-                render: (_, r) => {
-                  const v = cambio(r);
-                  return v === null ? "-" : <span className={claseCambio(v)}>{v > 0 ? "+" : ""}{fmt(v)}</span>;
-                },
+                render: (_, r) => <CeldaNumero valor={r.anterior} unidad={esRatio ? "%" : "monto"} />,
+              },
+              {
+                title: (
+                  <TituloAyuda
+                    titulo={fechaCorta(ctx.fecha)}
+                    ayuda={`Valor del corte con su variación anual (A)${esRatio ? " en puntos" : ""}`}
+                  />
+                ),
+                key: "c",
+                align: "right",
+                onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                render: (_, r) =>
+                  r.actual === null ? "-" : <CeldaValor code={ind.code} unidad={esRatio ? "%" : "monto"} valor={r.actual} anterior={r.anterior} />,
               },
               ...(esRatio
                 ? []

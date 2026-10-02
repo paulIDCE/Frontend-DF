@@ -2,7 +2,6 @@ import { useMemo, useState, type ReactNode } from "react";
 import { Checkbox, Segmented, Select, Spin, Tabs } from "antd";
 import {
   CLASE_COLUMNA_ACTIVA,
-  CeldaIndicadorVariacion,
   FranjaSelectores,
   TEXTO_GRAFICA,
   TablaAnalitica,
@@ -17,7 +16,8 @@ import {
   type ColumnaExcel,
 } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
+import { unidadDeEje, type UnidadCelda } from "../unidades";
 import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
 import { colorSerie, opcionHistorico } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
@@ -27,7 +27,6 @@ import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
 import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
 import { calificacion } from "../calificacion";
 import { legible } from "../texto";
-import { sentidoDe } from "../catalogoIndicadores";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -162,12 +161,15 @@ const RejillaIndicadores = ({
   extra,
   alto = 280,
   lateral,
+  pie,
 }: {
   categorias: CategoriaIndicadores[];
   navegacion: NavegacionIndicadores;
   extra?: ExtraSeries;
   alto?: number;
   lateral?: ReactNode;
+  /** Contenido bajo las graficas de cada categoria (tabla comparativa de la hoja 31). */
+  pie?: (cat: CategoriaIndicadores) => ReactNode;
 }) => {
   const impresion = useImpresion();
   const porKey = useMemo(() => new Map(categorias.map((c) => [c.key, c])), [categorias]);
@@ -196,6 +198,7 @@ const RejillaIndicadores = ({
               {item.titulo}
             </h3>
             <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />
+            {pie?.(porKey.get(item.key)!)}
           </section>
         )),
       )}
@@ -225,7 +228,12 @@ const RejillaIndicadores = ({
         pestanas={grupo.items.map((item) => ({
           key: item.key,
           titulo: item.titulo,
-          contenido: <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />,
+          contenido: (
+            <div className="flex flex-col gap-3">
+              <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />
+              {pie?.(porKey.get(item.key)!)}
+            </div>
+          ),
         }))}
       />
     </div>
@@ -372,21 +380,20 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
       columns={[
         { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : "text-tinta"}>{legible(r.nombre)}</span> },
         { title: "Meta", render: (_, r) => <span className="text-detalle text-tinta-secundaria">{r.meta}</span> },
-        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <span className="font-mono text-detalle">{fmt(ctx.valor(r.code, ctx.anioAnterior))}</span> },
-        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => <span className="font-mono text-detalle">{fmt(ctx.valor(r.code, ctx.mesAnterior))}</span> },
+        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.anioAnterior)} unidad="%" /> },
+        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.mesAnterior)} unidad="%" /> },
         {
           // Como la hoja 1 y la PyG: el valor del corte lleva debajo sus variaciones M y A, en puntos.
           title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación mensual (M) y anual (A) en puntos" />,
           align: "right",
           onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
           render: (_, r) => (
-            <CeldaIndicadorVariacion
+            <CeldaValor
+              code={r.code}
+              unidad="%"
               valor={ctx.valor(r.code)}
-              mensual={vm(r)}
-              anual={va(r)}
-              subirEsMalo={sentidoDe(r.code) === "baja"}
-              formato={fmt}
-              formatoVariacion={(v) => dec(v)}
+              mesAnterior={ctx.valor(r.code, ctx.mesAnterior)}
+              anterior={ctx.valor(r.code, ctx.anioAnterior)}
             />
           ),
         },
@@ -510,6 +517,80 @@ const MAX_ADICIONALES = 3;
 
 const cargarAdicional = async (nombre: string) => ({ nombre, filas: await cargarReporte(nombre) });
 
+interface FilaComparativa {
+  key: string;
+  code: string;
+  nombre: string;
+  unidad: UnidadCelda;
+}
+
+/**
+ * Tabla comparativa de la hoja 31: los indicadores de la categoria (filas) para la entidad de la
+ * revista y las elegidas (columnas). Como en la hoja 1, cada celda es el valor al corte con sus
+ * variaciones mensual y anual debajo (plan 06: las variaciones son metadato de su valor).
+ */
+const TablaComparativa = ({ cat, adicionales }: { cat: CategoriaIndicadores; adicionales: { nombre: string; ctx: Ctx }[] }) => {
+  const { ctx, entidad } = useRevista();
+  const archivo = useNombreDescarga(`comparativo_${cat.key}`);
+  const filas: FilaComparativa[] = cat.graficos.flatMap((g) =>
+    g.series
+      .filter((s) => !s.tipo)
+      .map((s) => ({
+        key: `${g.titulo}-${s.code}`,
+        code: s.code,
+        nombre: g.series.length > 1 ? `${legible(g.titulo)} · ${s.name ?? s.code}` : legible(g.titulo),
+        unidad: unidadDeEje(g.eje),
+      })),
+  );
+  const entidades = [{ nombre: entidad, ctx }, ...adicionales];
+  const celda = (c: Ctx, r: FilaComparativa) =>
+    c.fila(r.code) ? (
+      <CeldaValor
+        code={r.code}
+        unidad={r.unidad}
+        valor={c.valor(r.code, ctx.fecha)}
+        mesAnterior={c.valor(r.code, ctx.mesAnterior)}
+        anterior={c.valor(r.code, ctx.anioAnterior)}
+      />
+    ) : (
+      <span className="text-tinta-tenue">-</span>
+    );
+  const excel: ColumnaExcel<FilaComparativa>[] = [
+    { titulo: "Indicador", valor: (r) => r.nombre, ancho: 48 },
+    ...entidades.flatMap(({ nombre, ctx: c }): ColumnaExcel<FilaComparativa>[] => [
+      { titulo: `${nombre} ${fechaCorta(ctx.fecha)}`, valor: (r) => c.valor(r.code, ctx.fecha), ancho: 16 },
+      { titulo: `${nombre} var. mensual`, valor: (r) => c.valor(r.code, ctx.fecha) - c.valor(r.code, ctx.mesAnterior), ancho: 14 },
+      { titulo: `${nombre} var. anual`, valor: (r) => c.valor(r.code, ctx.fecha) - c.valor(r.code, ctx.anioAnterior), ancho: 14 },
+    ]),
+  ];
+  return (
+    <TablaAnalitica<FilaComparativa>
+      rowKey="key"
+      size="small"
+      bordered
+      pagination={false}
+      dataSource={filas}
+      excel={{ nombre: archivo, columnas: excel }}
+      scroll={{ x: "max-content" }}
+      columns={[
+        { title: "Indicador", key: "n", fixed: "left", render: (_, r) => <span className="text-tinta">{r.nombre}</span> },
+        ...entidades.map(({ nombre, ctx: c }, i) => ({
+          title: (
+            <TituloAyuda
+              titulo={nombre}
+              ayuda={`${fechaCorta(ctx.fecha)} con su variación mensual (M) y anual (A); en los porcentajes, en puntos`}
+            />
+          ),
+          key: nombre,
+          align: "right" as const,
+          onCell: () => ({ className: i === 0 ? CLASE_COLUMNA_ACTIVA : "" }),
+          render: (_: unknown, r: FilaComparativa) => celda(c, r),
+        })),
+      ]}
+    />
+  );
+};
+
 export const Hoja31 = () => {
   const { ctx, entidad } = useRevista();
   const { data: todas, isLoading } = useService(cargarListaEntidades, [], [], true, "No se pudieron cargar las entidades");
@@ -603,7 +684,13 @@ export const Hoja31 = () => {
   return (
     <>
       <CabeceraPagina titulo="COMPARATIVO CON OTRAS ENTIDADES FINANCIERAS" subtitulo="Análisis comparativo de indicadores clave" />
-      <RejillaIndicadores categorias={INDICADORES_31} navegacion={NAVEGACION_31} extra={{ adicionales }} lateral={lateral} />
+      <RejillaIndicadores
+        categorias={INDICADORES_31}
+        navegacion={NAVEGACION_31}
+        extra={{ adicionales }}
+        lateral={lateral}
+        pie={(cat) => <TablaComparativa cat={cat} adicionales={adicionales} />}
+      />
     </>
   );
 };

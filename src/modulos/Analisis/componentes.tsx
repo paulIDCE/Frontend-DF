@@ -1,8 +1,7 @@
 import { useMemo, type ReactNode } from "react";
 import {
   CLASE_COLUMNA_ACTIVA,
-  CeldaMoneda,
-  CeldaSaldoVariacion,
+  CeldaIndicadorVariacion,
   Delta,
   KpiCard,
   MiniGrafica,
@@ -22,12 +21,13 @@ import {
   PieChartOutlined,
 } from "@ant-design/icons";
 import { useRevista } from "./RevistaContext";
-import { fechaCorta, fmt, pct, type Dato } from "./datos";
+import { dec, fechaCorta, fmt, pct, type Dato } from "./datos";
 import { opcionMini } from "./opciones";
 import { claseVar } from "./estilos";
 import { PosicionGrupo } from "./PosicionGrupo";
 import { sentidoDe } from "./catalogoIndicadores";
 import { legible } from "./texto";
+import type { UnidadCelda } from "./unidades";
 
 /**
  * Piezas visuales comunes de la revista, sobre las del kit (`docs/VISTAS_ANALITICAS.md`,
@@ -114,6 +114,70 @@ export const KpiBox = ({
   );
 };
 
+/**
+ * Celda "valor + variaciones como metadato" de la revista (patron de la hoja 1): debajo del valor,
+ * la variacion mensual (M) y anual (A). Todo con coma decimal, como el resto de la revista (las
+ * celdas de monto del kit formatean en en-US): montos y conteos con variacion relativa (%) e
+ * indicadores en % con variacion en puntos (pp). La unidad del monto va en el encabezado. Una variacion `null` no se
+ * muestra (p. ej. solo la anual). El color sigue el sentido favorable de `code`.
+ */
+export const CeldaValor = ({
+  code,
+  valor,
+  anterior,
+  mesAnterior,
+  unidad,
+}: {
+  code: string;
+  valor: number | null;
+  /** Valor del mismo mes del año anterior (variacion A). */
+  anterior?: number | null;
+  /** Valor del mes anterior (variacion M). */
+  mesAnterior?: number | null;
+  unidad: UnidadCelda;
+}) => {
+  const subirEsMalo = sentidoDe(code) === "baja";
+  const ok = (x: number | null | undefined): x is number => x !== null && x !== undefined && Number.isFinite(x);
+  if (unidad === "%") {
+    const dif = (b: number | null | undefined) => (ok(valor) && ok(b) ? valor - b : null);
+    return (
+      <CeldaIndicadorVariacion
+        valor={valor}
+        mensual={dif(mesAnterior)}
+        anual={dif(anterior)}
+        subirEsMalo={subirEsMalo}
+        formato={(v) => pct(v, 2)}
+        formatoVariacion={(v) => dec(v)}
+      />
+    );
+  }
+  const rel = (b: number | null | undefined) => (ok(valor) && ok(b) && b !== 0 ? (valor - b) / Math.abs(b) : null);
+  {
+    const relPct = (b: number | null | undefined) => {
+      const r = rel(b);
+      return r === null ? null : r * 100;
+    };
+    return (
+      <CeldaIndicadorVariacion
+        valor={valor}
+        mensual={relPct(mesAnterior)}
+        anual={relPct(anterior)}
+        subirEsMalo={subirEsMalo}
+        formato={unidad === "monto" ? (v) => dec(v, 2) : fmt}
+        formatoVariacion={(v) => dec(v, 1)}
+        sufijoVariacion="%"
+      />
+    );
+  }
+};
+
+/** Valor de un corte anterior, con el mismo formato que `CeldaValor` (montos y % con 2 decimales). */
+export const CeldaNumero = ({ valor, unidad = "monto" }: { valor: number | null | undefined; unidad?: UnidadCelda }) => (
+  <span className="font-mono text-detalle whitespace-nowrap">
+    {valor === null || valor === undefined || !Number.isFinite(valor) ? "—" : unidad === "%" ? pct(valor, 2) : unidad === "monto" ? dec(valor, 2) : fmt(valor)}
+  </span>
+);
+
 /** Nombre de archivo de las descargas de la hoja: `<hoja>_<entidad>_<fecha>`. */
 export const useNombreDescarga = (detalle?: string) => {
   const { hoja, entidad, ctx } = useRevista();
@@ -182,8 +246,8 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
             </span>
           ),
         },
-        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => <CeldaMoneda valor={r.d.anioAnterior} /> },
-        { title: fechaCorta(ctx.mesAnterior), key: "m", align: "right", render: (_, r) => <CeldaMoneda valor={r.d.mesAnterior} /> },
+        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => <CeldaNumero valor={r.d.anioAnterior} /> },
+        { title: fechaCorta(ctx.mesAnterior), key: "m", align: "right", render: (_, r) => <CeldaNumero valor={r.d.mesAnterior} /> },
         {
           // Como la hoja 1: el saldo del corte lleva debajo sus variaciones mensual (M) y anual (A).
           title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Saldo del corte con su variación mensual (M) y anual (A)" />,
@@ -191,12 +255,7 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
           align: "right",
           onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
           render: (_, r) => (
-            <CeldaSaldoVariacion
-              valor={r.d.actual}
-              mensual={r.d.varMensual / 100}
-              anual={r.d.varAnual / 100}
-              subirEsMalo={sentidoDe(r.code) === "baja"}
-            />
+            <CeldaValor code={r.code} unidad="monto" valor={r.d.actual} mesAnterior={r.d.mesAnterior} anterior={r.d.anioAnterior} />
           ),
         },
       ]}

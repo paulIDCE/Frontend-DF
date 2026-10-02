@@ -3,8 +3,6 @@ import { Button, Checkbox, Spin } from "antd";
 import { AuditOutlined, BankOutlined, RiseOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import {
   CLASE_COLUMNA_ACTIVA,
-  CeldaMoneda,
-  CeldaSaldoVariacion,
   Delta,
   FilaKpis,
   KpiCard,
@@ -18,7 +16,7 @@ import {
 import { apiSeriesSistema } from "@/services/apiDatos";
 import { aFilasSistema } from "@/services/adaptadores";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, zoomRevista, type Dato } from "../datos";
 import { colorSerie, opcionComparativoAnual } from "../opciones";
 
@@ -42,12 +40,10 @@ const ICONO_KPI: Record<string, ReactNode> = {
   Gan_Eje: <RiseOutlined />,
 };
 
-/** Variaciones de la revista (en %) a la fraccion que esperan las celdas del kit. */
-const fraccion = (v: number) => v / 100;
 
 /**
  * Hoja 1 — Balance General. Arriba, los principales resultados como KPIs; debajo, la tabla de
- * cuentas (saldo con variacion mensual y anual, `CeldaSaldoVariacion` del kit) enlazada con la
+ * cuentas (saldo con variacion mensual y anual, `CeldaValor`) enlazada con la
  * grafica comparativa: clic en una cuenta y la grafica muestra su año actual contra el anterior.
  * En el PDF no hay clic: salen las comparativas de Activo, Pasivo y Patrimonio.
  */
@@ -123,14 +119,14 @@ export const Hoja1 = () => {
                   </span>
                 ),
               },
-              { title: fechaCorta(ctx.anioAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaMoneda valor={r.d!.anioAnterior} /> },
-              { title: fechaCorta(ctx.mesAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaMoneda valor={r.d!.mesAnterior} /> },
+              { title: fechaCorta(ctx.anioAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaNumero valor={r.d!.anioAnterior} /> },
+              { title: fechaCorta(ctx.mesAnterior), align: "right", onCell: resaltar, render: (_, r) => <CeldaNumero valor={r.d!.mesAnterior} /> },
               {
                 title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Saldo del corte con su variación mensual (M) y anual (A)" />,
                 align: "right",
                 onCell: resaltar,
                 render: (_, r) => (
-                  <CeldaSaldoVariacion valor={r.d!.actual} mensual={fraccion(r.d!.varMensual)} anual={fraccion(r.d!.varAnual)} />
+                  <CeldaValor code={r.code} unidad="monto" valor={r.d!.actual} mesAnterior={r.d!.mesAnterior} anterior={r.d!.anioAnterior} />
                 ),
               },
             ]}

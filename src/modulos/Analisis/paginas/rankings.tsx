@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { Radio, Spin, Table } from "antd";
-import { TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
+import { KpiCard, TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
 import { archivoEntidad } from "@/services/datosService";
 import { apiRanking } from "@/services/apiDatos";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
+import { CabeceraPagina, Grafica, TituloBloque, useNombreDescarga } from "../componentes";
+import { legible } from "../texto";
+import { TrophyOutlined } from "@ant-design/icons";
 import { claseVar } from "../estilos";
-import { fechaCorta, fmt, variacion } from "../datos";
-import { colorSerie } from "../opciones";
+import { fechaCorta, fmt, pct, variacion } from "../datos";
+import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
 
 /**
  * Rankings de entidades (hojas 5, 9, 24, 25, 26) — porte de `RANKING_CONFIGS`
@@ -87,7 +89,6 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
   const posicion = respuesta?.posicionEntidad ?? 0;
   const totales = respuesta?.total ?? { anterior: 0, actual: 0 };
 
-  const podio = [color.advertencia.base, color.datos.eje, color.advertencia.activo];
   const treemap = {
     tooltip: {
       confine: true,
@@ -112,10 +113,11 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
           color: color.tinta.inversa,
           fontWeight: "bold",
         },
-        data: ranking.slice(0, 20).map((r, i) => ({
+        // La entidad de la revista en el color de la entidad; las demas, en el del grupo.
+        data: ranking.slice(0, 20).map((r) => ({
           name: r.entidad,
           value: Number(r.partActual.toFixed(2)),
-          itemStyle: { color: i < 3 ? podio[i] : colorSerie(i - 3) },
+          itemStyle: { color: r.entidad === entidad ? COLOR_ENTIDAD : COLOR_GRUPO },
         })),
       },
     ],
@@ -123,8 +125,7 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
 
   const claseFila = (r: { posicion: number; entidad: string }) =>
     [
-      r.entidad === entidad ? "font-bold" : "",
-      r.posicion <= 3 ? "text-advertencia-activo" : "",
+      r.entidad === entidad ? "font-semibold" : "",
     ].join(" ");
 
   return (
@@ -132,16 +133,24 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
       <CabeceraPagina titulo={c.titulo} subtitulo={c.subtitulo} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_minmax(0,0.9fr)]">
         <div className="flex flex-col gap-3">
+          <KpiCard
+            titulo="Posición en el ranking"
+            color="accion"
+            icono={<TrophyOutlined />}
+            valor={isLoading ? "…" : posicion || "-"}
+            sufijo={respuesta ? `de ${respuesta.filas.length}` : ""}
+            pie={<span className="text-rotulo text-tinta-tenue">{c.nombre.toLowerCase()} · {fechaCorta(ctx.fecha)}</span>}
+          />
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-            <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">Filtros Ranking</h4>
+            <TituloBloque>Grupo del ranking</TituloBloque>
             <Radio.Group value={filtro} onChange={(e) => setFiltro(e.target.value)} className="flex flex-col gap-1">
-              <Radio value="sector">Por Sector Financiero</Radio>
-              <Radio value="activos">Por nivel de Activos</Radio>
-              <Radio value="provincia">Por Provincia</Radio>
+              <Radio value="sector">Mismo sector</Radio>
+              <Radio value="activos">Mismo nivel de activos</Radio>
+              <Radio value="provincia">Misma provincia</Radio>
             </Radio.Group>
           </section>
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-            <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">RESUMEN DEL CUADRO</h4>
+            <TituloBloque>Resumen del cuadro</TituloBloque>
             <TablaAnalitica<FilaResumen>
               rowKey="code"
               size="small"
@@ -149,7 +158,7 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
               dataSource={resumen}
               excel={{ nombre: archivoResumen, columnas: excelResumen }}
               columns={[
-                { title: "Cuenta", render: (_, r) => <strong>{r.name}</strong> },
+                { title: "Cuenta", render: (_, r) => <span className="font-semibold">{legible(r.name)}</span> },
                 { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(r.anterior) },
                 { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(r.actual)}</strong> },
                 {
@@ -157,16 +166,12 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
                   align: "right",
                   render: (_, r) => (
                     <span className={claseVar(r.variacion)}>
-                      {r.variacion.toFixed(1)}% {r.variacion > 0 ? "▲" : r.variacion < 0 ? "▼" : "─"}
+                      {pct(r.variacion, 1)} {r.variacion > 0 ? "▲" : r.variacion < 0 ? "▼" : "─"}
                     </span>
                   ),
                 },
               ]}
             />
-            <div className="mt-4 flex flex-col items-center rounded-tarjeta bg-identidad p-3 text-tinta-inversa">
-              <span className="text-display font-extrabold">{isLoading ? "…" : posicion || "-"}</span>
-              <span className="text-rotulo font-bold">POSICIÓN EN EL RANKING</span>
-            </div>
           </section>
         </div>
 
@@ -200,9 +205,9 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
               { title: "Posición", dataIndex: "posicion", width: 80, align: "center" },
               { title: "Entidad", dataIndex: "entidad" },
               { title: `${c.nombre} ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => fmt(r.anterior) },
-              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => `${r.partAnterior.toFixed(2)}%` },
+              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => pct(r.partAnterior) },
               { title: `${c.nombre} ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => fmt(r.actual) },
-              { title: `Part. ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => `${r.partActual.toFixed(2)}%` },
+              { title: `Part. ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => pct(r.partActual) },
             ]}
           />
         )}

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Segmented } from "antd";
-import { FranjaSelectores, TEXTO_GRAFICA } from "@idce/kit";
+import { Delta, FilaKpis, FranjaSelectores, KpiCard, TEXTO_GRAFICA } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, seriesFlujo, variacion, zoomRevista, type Ctx } from "../datos";
 import { colorSerie } from "../opciones";
-import { claseVar } from "../estilos";
+import { sentidoDe } from "../catalogoIndicadores";
 
 /**
  * Hoja "Tendencias": TAM + Grafico Z (Managerial Analyzer §5.7; plan 06, item 1.11). El TAM (total
@@ -54,9 +54,10 @@ const opcionGraficoZ = (ctx: Ctx, p: Partida, etiquetas: boolean) => {
     yAxis: { type: "value", name: "millones USD", nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
     dataZoom: zoomRevista(ctx, 36),
     series: [
-      linea("Valor del mes", s.mensual, 2, { type: "bar", barMaxWidth: 18 }),
-      linea("Acumulado del año", s.acumulado, 1, { lineStyle: { type: "dashed" } }),
+      // Orden fijo de la paleta: la serie i lleva el color i.
       linea("TAM (últimos 12 meses)", s.tam, 0, { lineStyle: { width: 3 } }),
+      linea("Acumulado del año", s.acumulado, 1, { lineStyle: { type: "dashed" } }),
+      linea("Valor del mes", s.mensual, 2, { type: "bar", barMaxWidth: 18 }),
     ],
   };
 };
@@ -91,23 +92,20 @@ export const HojaTendencias = () => {
           },
         ]}
       />
-      <div className="my-3 flex flex-wrap gap-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-1 rounded-tarjeta border-l-4 border-identidad bg-superficie p-3 shadow-tarjeta">
-          <span className="text-rotulo font-bold uppercase text-tinta-secundaria">TAM {partida.nombre}</span>
-          <span className="text-cifra font-extrabold text-identidad">{tamActual === null ? "—" : fmt(tamActual)}</span>
-          <span className="flex gap-2 text-detalle">
-            {varTam !== null && (
-              <span className={`font-semibold ${claseVar(varTam)}`}>
-                {varTam >= 0 ? "+" : ""}
-                {varTam.toFixed(2)}%
-              </span>
-            )}
-            <span className="text-tinta-tenue">vs. {fechaCorta(ctx.anioAnterior)}</span>
-          </span>
-        </div>
-        {partida.acumulada && <KpiBox titulo={`Acumulado del año ${partida.nombre}`} code={partida.code} />}
-        {partida.acumulada && <KpiBox titulo={`Anualizado simple (× 12 / mes)`} code={partida.code.startsWith("@") ? `${partida.code}A` : `${partida.code}_anual`} />}
-      </div>
+      <FilaKpis columnas={3} className="my-3">
+        <KpiCard
+          titulo={`TAM · ${partida.nombre}`}
+          color="monto"
+          valor={tamActual === null ? "—" : fmt(tamActual)}
+          sufijo="M USD"
+          valorSecundario={<Delta valor={varTam} sufijo="%" subirEsMalo={sentidoDe(partida.code) === "baja"} etiqueta={`vs. ${fechaCorta(ctx.anioAnterior)}`} />}
+          pie={<span className="text-rotulo text-tinta-tenue">Total de los últimos 12 meses</span>}
+        />
+        {partida.acumulada && <KpiBox titulo={`Acumulado del año · ${partida.nombre}`} code={partida.code} />}
+        {partida.acumulada && (
+          <KpiBox titulo="Anualizado simple (× 12 / mes)" code={partida.code.startsWith("@") ? `${partida.code}A` : `${partida.code}_anual`} />
+        )}
+      </FilaKpis>
       <Grafica
         titulo={`Gráfico Z - ${partida.nombre}`}
         nota="TAM(m) = acumulado(m) + acumulado de diciembre del año anterior − acumulado del mismo mes del año anterior. Necesita 12 meses previos: el primero sale un año después del primer dato."

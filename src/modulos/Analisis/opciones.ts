@@ -13,17 +13,33 @@ import { MESES, fechaCorta, fechaLarga, fmt, mesesDeAnios, zoomRevista } from ".
  */
 
 const S = color.datos.series;
-/** Paleta por indice de serie (ciclica para mas de 8 series). */
+/**
+ * Paleta de datos del kit en ORDEN FIJO: la serie i de una grafica toma siempre el color i
+ * (`TOKENS.md`: no reordenar). Con mas de 8 series se repite, pero se evita: una grafica con mas
+ * de 8 series se lee mejor como tabla o con "Ver datos".
+ */
 export const colorSerie = (i: number): string => S[i % S.length];
+
+/*
+ * Roles de color de la revista, iguales en todas las hojas:
+ * - el corte ACTUAL en serie 1 y los cortes de COMPARACION en gris (año anterior) o serie 1 tenue
+ *   (mes anterior);
+ * - la ENTIDAD de la revista en serie 2 frente a su GRUPO (las demas entidades) en serie 1;
+ * - en cascadas y fuentes/usos, lo que SUMA en exito y lo que RESTA en error (estado favorable /
+ *   desfavorable del kit); los totales en serie 1.
+ */
 export const COLOR_ACTUAL = S[0];
 export const COLOR_ANTERIOR = color.datos.eje;
-const COLOR_MES_ANT = conAlfa(S[0], 0.55);
+export const COLOR_MES_ANTERIOR = conAlfa(S[0], 0.45);
+export const COLOR_ENTIDAD = S[1];
+export const COLOR_GRUPO = S[0];
+export const COLOR_SUMA = color.exito.base;
+export const COLOR_RESTA = color.error.base;
 
 const etiqueta = (visible: boolean, extra: Record<string, unknown> = {}) => ({
   show: visible,
   position: "top",
   ...TEXTO_GRAFICA,
-  fontWeight: "bold",
   formatter: (p: { value: number }) => fmt(p.value),
   ...extra,
 });
@@ -74,8 +90,8 @@ export const opcionTresCortes = (
 ) => {
   const cortes = [
     { f: ctx.anioAnterior, c: COLOR_ANTERIOR },
-    { f: ctx.mesAnterior, c: COLOR_MES_ANT },
-    { f: ctx.fecha, c: color.identidad.base },
+    { f: ctx.mesAnterior, c: COLOR_MES_ANTERIOR },
+    { f: ctx.fecha, c: COLOR_ACTUAL },
   ];
   return {
     tooltip: { ...tooltipEje, axisPointer: PUNTERO_BARRA },
@@ -84,7 +100,7 @@ export const opcionTresCortes = (
     xAxis: {
       type: "category",
       data: cuentas.map((c) => c.name),
-      axisLabel: { ...TEXTO_GRAFICA, fontWeight: "bold" },
+      axisLabel: TEXTO_GRAFICA,
       axisTick: { show: false },
     },
     yAxis: ejeValor(eje),
@@ -149,15 +165,10 @@ export const opcionHistorico = (
 };
 
 /** Mini grafico de los ultimos 6 meses (mini KPIs). */
-export const opcionMini = (
-  ctx: Ctx,
-  code: string,
-  tipo: "bar" | "line",
-  indiceColor: number,
-  etiquetas: boolean,
-  sufijo = "%"
-) => {
-  const ult = ctx.fechas.slice(-6);
+export const opcionMini = (ctx: Ctx, code: string, tipo: "bar" | "line", etiquetas: boolean, sufijo = "%") => {
+  // Los 6 meses que terminan en el corte elegido (no en el ultimo dato).
+  const fin = Math.max(0, ctx.fechas.indexOf(ctx.fecha));
+  const ult = ctx.fechas.slice(Math.max(0, fin - 5), fin + 1);
   return {
     grid: { top: 18, bottom: 18, left: 4, right: 4 },
     xAxis: {
@@ -173,12 +184,12 @@ export const opcionMini = (
       {
         type: tipo,
         data: ctx.serie(code, ult),
-        color: colorSerie(indiceColor),
+        color: COLOR_ACTUAL,
         smooth: tipo === "line",
         symbolSize: 4,
-        areaStyle: tipo === "line" ? { opacity: 0.2 } : undefined,
+        areaStyle: tipo === "line" ? { opacity: 0.08 } : undefined,
         barWidth: "70%",
-        label: etiqueta(etiquetas, { formatter: (p: { value: number }) => `${p.value.toFixed(1)}${sufijo}` }),
+        label: etiqueta(etiquetas, { formatter: (p: { value: number }) => `${fmt(p.value)}${sufijo}` }),
       },
     ],
   };
@@ -204,7 +215,7 @@ export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "m
     acumulado = hasta;
     const lo = Math.min(desde, hasta);
     const hi = Math.max(desde, hasta);
-    const tono = p.total ? S[0] : p.valor >= 0 ? color.exito.base : color.error.base;
+    const tono = p.total ? COLOR_ACTUAL : p.valor >= 0 ? COLOR_SUMA : COLOR_RESTA;
     if (lo >= 0) return { ...p, base: lo, pos: hi - lo, neg: 0, tono };
     if (hi <= 0) return { ...p, base: hi, pos: 0, neg: lo - hi, tono };
     return { ...p, base: 0, pos: hi, neg: lo, tono };
@@ -219,7 +230,6 @@ export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "m
       show: etiquetas,
       position: clave === "pos" ? "top" : "bottom",
       ...TEXTO_GRAFICA,
-      fontWeight: "bold",
       // La etiqueta va en la parte que lleva el signo del paso (en una que cruza el 0, la positiva).
       formatter: (p: { dataIndex: number }) => {
         const f = filas[p.dataIndex];

@@ -1,4 +1,4 @@
-import { useService } from "@idce/kit";
+import { FilaKpis, useService } from "@idce/kit";
 import { apiRanking } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
 import { useRevista } from "../RevistaContext";
@@ -57,7 +57,7 @@ const Calificacion = ({ titulo, code }: { titulo: string; code: string }) => {
       </span>
       <span className="flex flex-col">
         <span className="text-rotulo font-bold uppercase text-tinta-secundaria">{titulo}</span>
-        <span className="text-cuerpo font-bold text-identidad">
+        <span className="text-cuerpo font-bold text-tinta">
           {fmt(d.actual)} · {c.texto.slice(4)}
         </span>
         <span className="text-detalle text-tinta-tenue">
@@ -76,16 +76,16 @@ export const HojaResumen = () => {
   return (
     <>
       <CabeceraPagina titulo={`RESUMEN EJECUTIVO - ${entidad}`} subtitulo={`${tamano} · datos al ${fechaCorta(ctx.fecha)} · variaciones anuales`} />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={4} className="mb-3">
         {KPIS.map(([code, titulo]) => (
           <KpiBox key={code} titulo={titulo} code={code} grupoPar={code !== "Gan_Eje"} />
         ))}
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             {RATIOS.filter(([code]) => ctx.fila(code)).map(([code, titulo, i]) => (
-              <MiniKpi key={code} titulo={titulo} code={code} tipo={i % 2 ? "line" : "bar"} indiceColor={i} grupoPar={!code.startsWith("DER_")} />
+              <MiniKpi key={code} titulo={titulo} code={code} tipo={i % 2 ? "line" : "bar"} grupoPar={!code.startsWith("DER_")} />
             ))}
           </div>
         </div>
@@ -96,7 +96,7 @@ export const HojaResumen = () => {
             <Calificacion titulo="PERLAS" code="efic_perlas_acum" />
           </div>
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-            <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">Posición en el sector ({tamano})</h4>
+            <h4 className="m-0 mb-2 text-cuerpo font-semibold text-tinta">Posición en el sector ({tamano})</h4>
             <ul className="m-0 flex list-none flex-col gap-1 p-0 text-detalle">
               {(posiciones ?? []).map((p) => (
                 <li key={p.nombre} className="flex justify-between">

@@ -16,7 +16,7 @@ import {
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { claseVar } from "../estilos";
-import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista } from "../datos";
+import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
 import { colorSerie, opcionHistorico } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
@@ -24,6 +24,7 @@ import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "
 import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
 import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
 import { calificacion } from "../calificacion";
+import { legible } from "../texto";
 import {
   NAVEGACION_27,
   NAVEGACION_29,
@@ -48,7 +49,7 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
     const s = por(sup);
     const i = por(inf);
     if (!s || !i || !ctx.fila(s.code) || !ctx.fila(i.code)) return [];
-    const c = color.datos.series[0];
+    const c = color.datos.eje;
     return [
       // Superior rellena hacia abajo; inferior "corta" con el fondo: queda la franja.
       { name: nombre, type: "line", data: ctx.serie(s.code), symbol: "none", z, lineStyle: { width: 1, type: "dashed", color: c }, color: c, areaStyle: { color: conAlfa(c, alfa) } },
@@ -87,8 +88,8 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
     series: [
       ...banda("2SD_superior", "2SD_inferior", "Banda ±2SD", 0.2, 1),
       ...banda("1SD_superior", "1SD_inferior", "Banda ±1SD", 0.35, 3),
-      ...linea(principal, color.datos.series[7], "solid"),
-      ...linea(secundaria, color.datos.series[0], "dashed"),
+      ...linea(principal, color.datos.series[0], "solid"),
+      ...linea(secundaria, color.datos.series[1], "dashed"),
     ],
   };
 };
@@ -187,7 +188,7 @@ const RejillaIndicadores = ({
       {grupos.flatMap((g) =>
         g.items.map((item) => (
           <section key={`${g.key}-${item.key}`} className="flex flex-col gap-2">
-            <h3 className="m-0 text-cuerpo font-bold text-identidad">
+            <h3 className="m-0 text-cuerpo font-semibold text-tinta">
               {grupos.length > 1 ? `${g.titulo} · ` : ""}
               {item.titulo}
             </h3>
@@ -358,7 +359,7 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
   ];
   const pp = (v: number) => (
     <span className={claseVar(v)}>
-      {v.toFixed(2)} pp {v > 0 ? "▲" : v < 0 ? "▼" : "─"}
+      {dec(v)} pp {v > 0 ? "▲" : v < 0 ? "▼" : "─"}
     </span>
   );
   return (
@@ -371,7 +372,7 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
       excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content", y: 460 }}
       columns={[
-        { title: "Indicador", render: (_, r) => <span className={r.nivel === 1 ? "font-bold text-identidad" : ""}>{r.nombre}</span> },
+        { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : ""}>{legible(r.nombre)}</span> },
         { title: "Meta", render: (_, r) => r.meta },
         { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.anioAnterior)) },
         { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r.code, ctx.mesAnterior)) },
@@ -392,7 +393,7 @@ const Calificaciones = ({ code, titulo, subtitulo, puntaje }: { code: string; ti
   ];
   return (
     <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-      <h3 className="m-0 text-subtitulo font-bold text-identidad">{titulo}</h3>
+      <h3 className="m-0 text-subtitulo font-semibold text-tinta">{legible(titulo)}</h3>
       <p className="m-0 mb-3 text-detalle text-tinta-tenue">{subtitulo}</p>
       <div className="flex justify-around gap-2">
         {cortes.map(([f, rot]) => {
@@ -406,8 +407,8 @@ const Calificaciones = ({ code, titulo, subtitulo, puntaje }: { code: string; ti
               <span className="text-rotulo text-tinta-tenue">
                 {rot} · {fechaCorta(f)}
               </span>
-              <span className="text-detalle font-semibold">{v.toFixed(2)}%</span>
-              {puntaje && <span className="text-rotulo text-tinta-secundaria">Puntaje: {ctx.valor(puntaje, f).toFixed(2)}</span>}
+              <span className="text-detalle font-semibold">{pct(v)}</span>
+              {puntaje && <span className="text-rotulo text-tinta-secundaria">Puntaje: {dec(ctx.valor(puntaje, f))}</span>}
             </div>
           );
         })}
@@ -557,7 +558,7 @@ export const Hoja31 = () => {
 
   const lateral = (
     <aside className="flex flex-col gap-3 rounded-tarjeta border border-linea bg-superficie p-3">
-      <h4 className="m-0 text-cuerpo font-bold text-identidad">Filtros de Búsqueda para Comparación</h4>
+      <h4 className="m-0 text-cuerpo font-semibold text-tinta">Filtros de Búsqueda para Comparación</h4>
       {filtro("tamano", "Tamaño/Segmento")}
       {filtro("provincia", "Provincia")}
       {filtro("rango", "Nivel de Activos")}

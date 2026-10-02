@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { Radio, Segmented, Select, Spin } from "antd";
-import { EstadoError, FranjaSelectores, TEXTO_GRAFICA, TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
+import { EstadoError, FranjaSelectores, TEXTO_GRAFICA, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
 import { apiRanking } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
 import type { Agrupacion } from "@/types/api";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { claseVar } from "../estilos";
-import { fechaCorta, fmt, variacion } from "../datos";
+import { fechaCorta, fmt, variacion, pct } from "../datos";
 import { GRUPOS_INDICADORES, type IndicadorCatalogo } from "../catalogoIndicadores";
 import { ordenarPorIndicador, type FilaIndicador } from "../grupoPar";
+import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
 
 /**
  * Hoja "Ranking por indicador" (RADAR tablero 7; plan 06, item 1.15). Generaliza los rankings de
@@ -36,10 +37,8 @@ const opcionBarras = (filas: FilaIndicador[], ind: IndicadorCatalogo, entidad: s
         name: ind.nombre,
         type: "bar",
         barMaxWidth: 16,
-        data: datos.map((f) => ({
-          value: f.actual,
-          itemStyle: { color: f.nombre === entidad ? color.advertencia.base : color.datos.series[0] },
-        })),
+        data: datos.map((f) => f.actual),
+        itemStyle: { color: (p: { dataIndex: number }) => (datos[p.dataIndex]?.nombre === entidad ? COLOR_ENTIDAD : COLOR_GRUPO) },
         label: { show: etiquetas, position: "right", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
       },
     ],
@@ -123,7 +122,7 @@ export const HojaRankingIndicador = () => {
         {ind.sentido === "sube" ? "Mayor es mejor." : "Menor es mejor."}{" "}
         {propia && propia.posicion ? (
           <>
-            <strong className="text-identidad">{entidad}</strong> ocupa el puesto <strong>{propia.posicion}</strong> de {conDato}
+            <strong className="text-tinta">{entidad}</strong> ocupa el puesto <strong>{propia.posicion}</strong> de {conDato}
             {" "}con {fmt(propia.actual)}
             {esRatio ? " %" : " millones USD"}.
           </>
@@ -166,12 +165,12 @@ export const HojaRankingIndicador = () => {
               },
               ...(esRatio
                 ? []
-                : [{ title: "Part.", key: "pt", align: "right" as const, render: (_: unknown, r: FilaIndicador) => `${r.participacion.toFixed(2)}%` }]),
+                : [{ title: "Part.", key: "pt", align: "right" as const, render: (_: unknown, r: FilaIndicador) => pct(r.participacion) }]),
             ]}
           />
           <Grafica
             titulo={`${ind.nombre} - ${fechaCorta(ctx.fecha)} (25 primeras)`}
-            nota="En ámbar, la entidad de la revista (se agrega al final si no está entre las 25 primeras)."
+            nota="En naranja, la entidad de la revista (se agrega al final si no está entre las 25 primeras)."
             option={filas.length ? opcionBarras(filas, ind, entidad, etiquetas) : null}
             alto={600}
             cambioTipo={false}

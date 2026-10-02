@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Segmented, Select, Spin } from "antd";
-import { EstadoError, FranjaSelectores, TEXTO_GRAFICA, TarjetaGrafica, color, useService } from "@idce/kit";
+import { Delta, EstadoError, FilaKpis, FranjaSelectores, KpiCard, TEXTO_GRAFICA, TarjetaGrafica, color, useService } from "@idce/kit";
+import { CabeceraPagina } from "@/modulos/Analisis/componentes";
 import { apiMeta, apiRanking, apiSeriesSistema } from "@/services/apiDatos";
 import { cargarListaEntidades } from "@/modulos/Analisis/resumenEntidades";
 import { GRUPOS_INDICADORES } from "@/modulos/Analisis/catalogoIndicadores";
 import { ordenarPorIndicador } from "@/modulos/Analisis/grupoPar";
 import { fechaCorta, fechaLarga, fmt, restarMeses } from "@/modulos/Analisis/datos";
 import { SECTORES } from "./cargarCuadro";
+import { COLOR_ANTERIOR, COLOR_ENTIDAD, COLOR_GRUPO } from "@/modulos/Analisis/opciones";
 
 /**
  * Monitor del Sistema (RADAR "Información Financiera"; plan 06, item 1.17): UN indicador para TODO
@@ -86,7 +88,9 @@ const MonitorSistema = () => {
         name: ind.nombre,
         type: "bar",
         barMaxWidth: 18,
-        data: porSector.map((s) => ({ value: s.valor, itemStyle: { color: s.value === "nacional" ? color.datos.eje : color.datos.series[0] } })),
+        data: porSector.map((s) => s.valor),
+        // El total nacional en gris de referencia; los sectores en el color del grupo.
+        itemStyle: { color: (p: { dataIndex: number }) => (porSector[p.dataIndex]?.value === "nacional" ? COLOR_ANTERIOR : COLOR_GRUPO) },
         label: { show: true, position: "right", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
       },
     ],
@@ -118,10 +122,8 @@ const MonitorSistema = () => {
         type: "bar",
         barMaxWidth: 14,
         cursor: "pointer",
-        data: filas.map((f) => ({
-          value: f.actual,
-          itemStyle: { color: f.nombre === resaltada ? color.advertencia.base : color.datos.series[0] },
-        })),
+        data: filas.map((f) => f.actual),
+        itemStyle: { color: (p: { dataIndex: number }) => (filas[p.dataIndex]?.nombre === resaltada ? COLOR_ENTIDAD : COLOR_GRUPO) },
         label: { show: true, position: "right", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
       },
     ],
@@ -150,17 +152,16 @@ const MonitorSistema = () => {
       })),
   };
 
+  const unidadCorta = esRatio ? "%" : "M USD";
   const mejor = filas[0];
   const peor = filas[filas.length - 1];
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <header className="border-b-2 border-identidad pb-2">
-        <h2 className="m-0 text-titulo font-extrabold uppercase text-identidad">Monitor del Sistema</h2>
-        <p className="m-0 text-detalle text-tinta-tenue">
-          Un indicador para todo el sistema: por sector, por entidad y en su evolución. {ind.sentido === "sube" ? "Mayor" : "Menor"} es mejor.
-        </p>
-      </header>
+      <CabeceraPagina
+        titulo="Monitor del Sistema"
+        subtitulo={`Un indicador para todo el sistema: por sector, por entidad y en su evolución. ${ind.sentido === "sube" ? "Mayor" : "Menor"} es mejor.`}
+      />
       <FranjaSelectores
         grupos={[
           {
@@ -190,29 +191,31 @@ const MonitorSistema = () => {
         ]}
       />
 
-      <div className="flex flex-wrap gap-3">
-        {[
-          {
-            titulo: "Sistema nacional",
-            valor: nacional?.valor ?? null,
-            extra:
-              nacional?.valor != null && nacionalAnterior != null
-                ? `${esRatio ? `${fmt(nacional.valor - nacionalAnterior)} pp` : `${fmt(((nacional.valor - nacionalAnterior) / Math.abs(nacionalAnterior)) * 100)} %`} vs. ${fechaCorta(restarMeses(corte, 12))}`
-                : "",
-          },
-          { titulo: "Mejor entidad", valor: mejor?.actual ?? null, extra: mejor?.nombre ?? "" },
-          { titulo: "Peor entidad", valor: peor?.actual ?? null, extra: peor?.nombre ?? "" },
-          { titulo: "Entidades con dato", valor: filas.length, extra: tamano === TODOS ? "Todos los tipos" : tamano, entero: true },
-        ].map((k) => (
-          <div key={k.titulo} className="flex min-w-48 flex-1 flex-col gap-1 rounded-tarjeta border-l-4 border-identidad bg-superficie p-3 shadow-tarjeta">
-            <span className="text-rotulo font-bold uppercase text-tinta-secundaria">{k.titulo}</span>
-            <span className="text-cifra font-extrabold text-identidad">
-              {k.valor === null ? "—" : "entero" in k ? k.valor : `${fmt(k.valor)}${esRatio ? " %" : ""}`}
-            </span>
-            <span className="truncate text-detalle text-tinta-tenue">{k.extra}</span>
-          </div>
-        ))}
-      </div>
+      <FilaKpis columnas={4}>
+        <KpiCard
+          titulo="Sistema nacional"
+          color="monto"
+          valor={nacional?.valor == null ? "—" : fmt(nacional.valor)}
+          sufijo={unidadCorta}
+          valorSecundario={
+            <Delta
+              valor={
+                nacional?.valor != null && nacionalAnterior != null
+                  ? esRatio
+                    ? nacional.valor - nacionalAnterior
+                    : ((nacional.valor - nacionalAnterior) / Math.abs(nacionalAnterior)) * 100
+                  : null
+              }
+              sufijo={esRatio ? " pp" : "%"}
+              subirEsMalo={ind.sentido === "baja"}
+              etiqueta={`vs. ${fechaCorta(restarMeses(corte, 12))}`}
+            />
+          }
+        />
+        <KpiCard titulo="Mejor entidad" color="bueno" valor={mejor?.actual == null ? "—" : fmt(mejor.actual)} sufijo={unidadCorta} pie={<span className="truncate text-detalle text-tinta-tenue">{mejor?.nombre ?? ""}</span>} />
+        <KpiCard titulo="Peor entidad" color="malo" valor={peor?.actual == null ? "—" : fmt(peor.actual)} sufijo={unidadCorta} pie={<span className="truncate text-detalle text-tinta-tenue">{peor?.nombre ?? ""}</span>} />
+        <KpiCard titulo="Entidades con dato" color="neutro" valor={filas.length} pie={<span className="text-detalle text-tinta-tenue">{tamano === TODOS ? "Todos los tipos" : tamano}</span>} />
+      </FilaKpis>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <TarjetaGrafica

@@ -242,7 +242,7 @@ export const HojaAuditoria = () => {
               key: "n",
               fixed: "left",
               width: 320,
-              render: (_, r) => <span className={r.nivel === 1 ? "font-bold text-identidad" : r.nivel === 2 ? "font-medium" : ""}>{r.nombre}</span>,
+              render: (_, r) => <span className={r.nivel === 1 ? "font-bold text-tinta" : r.nivel === 2 ? "font-medium" : ""}>{r.nombre}</span>,
             },
             ...fechas.map((f, i) => ({
               title: fechaCorta(f),

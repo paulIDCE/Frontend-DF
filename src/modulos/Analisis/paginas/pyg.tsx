@@ -1,7 +1,7 @@
-import { TablaAnalitica } from "@idce/kit";
+import { FilaKpis, TablaAnalitica } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, PanelAnalisis, Seccion, TablaEstructura, Var, useNombreDescarga, type CuentaTabla } from "../componentes";
-import { fechaCorta, fmt } from "../datos";
+import { fechaCorta, fmt, dec } from "../datos";
 import { claseVar } from "../estilos";
 import { opcionCascada, opcionComparativoAnual, opcionHistorico, type PasoCascada } from "../opciones";
 import type { Ctx } from "../datos";
@@ -76,7 +76,7 @@ const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
     return { key: code, nombre: n, anterior, actual, ratio: anterior > 0 && actual >= 0 ? actual / anterior : null };
   });
   const ratio = (r: FilaEvolucion) =>
-    r.ratio === null ? "n/a" : <span className={claseVar(r.ratio - 1)}>{r.ratio.toFixed(2)}×</span>;
+    r.ratio === null ? "n/a" : <span className={claseVar(r.ratio - 1)}>{dec(r.ratio)}×</span>;
   return (
     <TablaAnalitica<FilaEvolucion>
       rowKey="key"
@@ -146,7 +146,6 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
   const tabla: CuentaTabla[] = ESTRUCTURA.map(([code, name, nivel]) => ({ code: c(code), name, nivel }));
   const ingresos = ctx.dato(c("@5"));
   const ganancia = ctx.dato(c("Gan_Eje"));
-  const icono = ingresos ? (ingresos.varMensual > 0 ? "📈" : ingresos.varMensual < 0 ? "📉" : "➡️") : "";
 
   return (
     <>
@@ -154,11 +153,11 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
         titulo={anualizado ? "ESTADO DE PÉRDIDAS Y GANANCIAS ANUALIZADO" : "ESTADO DE PÉRDIDAS Y GANANCIAS MENSUALIZADO"}
         subtitulo={`Análisis detallado de ingresos, gastos y resultados del ejercicio${anualizado ? " (Anualizado)" : ""}`}
       />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={3} className="mb-3">
         <KpiBox titulo="INGRESOS" code={c("@5")} />
         <KpiBox titulo="GASTOS" code={c("@4")} />
-        <KpiBox titulo="GANANCIA O (PÉRDIDA) DEL EJERCICIO" code={c("Gan_Eje")} />
-      </div>
+        <KpiBox titulo="GANANCIA O (PÉRDIDA) DEL EJERCICIO" code={c("Gan_Eje")} color={(ganancia?.actual ?? 0) >= 0 ? "bueno" : "malo"} />
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <div className="flex min-w-0 flex-col gap-3">
           <TablaEstructura cuentas={tabla} alto={440} />
@@ -167,7 +166,7 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
             <Seccion tipo="resumen" titulo="Resumen General">
               {ingresos && (
                 <p>
-                  {icono} Los <strong>Ingresos</strong> registran {fmt(ingresos.actual)} millones USD, con variación
+                  Los <strong>Ingresos</strong> registran {fmt(ingresos.actual)} millones USD, con variación
                   mensual de <Var v={ingresos.varMensual} />.
                 </p>
               )}

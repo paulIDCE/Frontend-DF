@@ -1,3 +1,4 @@
+import { FilaKpis } from "@idce/kit";
 import type { ReactNode } from "react";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, TablaEstructura, type CuentaTabla } from "../componentes";
@@ -27,11 +28,11 @@ const PaginaEstructura = ({ c }: { c: ConfigEstructura }) => {
       <CabeceraPagina titulo={c.titulo} subtitulo={c.subtitulo} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-wrap gap-3">
+          <FilaKpis columnas={3}>
             {c.kpis.map((k) => (
               <KpiBox key={k.code} titulo={k.titulo} code={k.code} />
             ))}
-          </div>
+          </FilaKpis>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Grafica titulo={c.principal.titulo} option={opcionTresCortes(ctx, [{ code: c.principal.code, name: c.principal.titulo }], etiquetas)} alto={260} />
             <Grafica titulo={c.cuentasTitulo ?? "Distribución por Cuenta"} option={opcionTresCortes(ctx, c.cuentas, etiquetas)} alto={260} />

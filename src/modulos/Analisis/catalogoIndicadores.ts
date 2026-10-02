@@ -110,4 +110,13 @@ const SENTIDO_DERIVADOS: Record<string, Sentido> = {
 
 export const indicador = (code: string): IndicadorCatalogo | undefined => POR_CODIGO.get(code.toUpperCase());
 
-export const sentidoDe = (code: string): Sentido => indicador(code)?.sentido ?? SENTIDO_DERIVADOS[code.toUpperCase()] ?? "sube";
+/**
+ * Cuentas donde subir es desfavorable (gastos, cartera en mora, activos improductivos): colorean las
+ * variaciones de los KPIs. Patrones sobre el CUC, con o sin sufijo anualizado (`A`) o de segmento.
+ */
+const CUENTAS_BAJA = [/^@4\d*A?$/, /^IF00[89](_\d)?$/, /^IF01[02](_\d)?$/, /^SB00[34]$/, /^SB018A$/];
+
+export const sentidoDe = (code: string): Sentido =>
+  indicador(code)?.sentido ??
+  SENTIDO_DERIVADOS[code.toUpperCase()] ??
+  (CUENTAS_BAJA.some((re) => re.test(code.toUpperCase())) ? "baja" : "sube");

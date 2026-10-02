@@ -71,7 +71,8 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
   const fecha = eleccion && eleccion.base === fechas ? eleccion.fecha : (fechas[fechas.length - 1] ?? "");
   const setFecha = (f: string) => setEleccion({ base: fechas, fecha: f });
 
-  const [etiquetas, setEtiquetas] = useState(true);
+  // Etiquetas de valor apagadas por defecto (estandar del kit); cada grafica puede encenderlas.
+  const [etiquetas, setEtiquetas] = useState(false);
   const [sectores, setSectores] = useState<string[]>([]);
   const [imprimiendo, setImprimiendo] = useState<Impresion | null>(null);
   const contenedorImpresion = useRef<HTMLDivElement>(null);
@@ -152,7 +153,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
         </Dropdown>
         <label className="flex items-center gap-2 text-detalle text-tinta-secundaria">
           <Switch size="small" checked={etiquetas} onChange={setEtiquetas} />
-          📊 Mostrar valores en gráficos
+          Mostrar valores en gráficos
         </label>
         <div className="ml-auto flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-1 text-detalle">
@@ -243,7 +244,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
                   type="button"
                   title={`${s.titulo} · ${i + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`}
                   onClick={() => irA(i)}
-                  className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${i === pos ? "bg-identidad" : "bg-linea-fuerte"}`}
+                  className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${i === pos ? "bg-accion" : "bg-linea-fuerte"}`}
                 />
               );
             })}

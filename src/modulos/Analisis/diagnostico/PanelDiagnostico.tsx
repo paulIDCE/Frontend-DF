@@ -3,6 +3,7 @@ import { Tag } from "antd";
 import { SafetyCertificateOutlined } from "@ant-design/icons";
 import { useRevista } from "../RevistaContext";
 import { fechaCorta } from "../datos";
+import { TituloBloque } from "../componentes";
 import { diagnosticar, type Bloque, type Severidad } from "./motor";
 
 const ETIQUETA: Record<Severidad, { texto: string; color: string }> = {
@@ -24,10 +25,8 @@ export const PanelDiagnostico = ({ bloques, maximo, titulo = "Diagnóstico" }: {
   }, [ctx, bloques, maximo]);
 
   return (
-    <section className="rounded-tarjeta border border-linea bg-superficie-sutil p-3">
-      <h4 className="m-0 mb-2 flex items-center gap-2 text-subtitulo font-bold text-identidad">
-        <SafetyCertificateOutlined /> {titulo} - {fechaCorta(ctx.fecha)}
-      </h4>
+    <section className="rounded-tarjeta border border-linea bg-superficie p-3">
+      <TituloBloque icono={<SafetyCertificateOutlined />}>{`${titulo} - ${fechaCorta(ctx.fecha)}`}</TituloBloque>
       {hallazgos.length ? (
         <ul className="m-0 flex list-none flex-col gap-1.5 p-0">
           {hallazgos.map((h) => (

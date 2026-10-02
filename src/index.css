@@ -54,7 +54,7 @@
 
   html,
   body {
-    background: #fff !important;
+    background: var(--color-superficie) !important;
   }
 
   #revista-impresion {

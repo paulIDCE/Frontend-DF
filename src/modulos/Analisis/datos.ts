@@ -51,7 +51,12 @@ export const fmt = (n: number | null | undefined): string =>
     ? "0,0"
     : n.toLocaleString("es-EC", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-export const pct = (n: number, decimales = 2): string => `${n.toFixed(decimales)}%`;
+/** Numero con coma decimal (es-EC) y `decimales` fijos. */
+export const dec = (n: number, decimales = 2): string =>
+  n.toLocaleString("es-EC", { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+
+export const pct = (n: number, decimales = 2): string =>
+  `${n.toLocaleString("es-EC", { minimumFractionDigits: decimales, maximumFractionDigits: decimales })}%`;
 
 export const variacion = (actual: number, anterior: number): number =>
   anterior !== 0 ? ((actual - anterior) / Math.abs(anterior)) * 100 : 0;

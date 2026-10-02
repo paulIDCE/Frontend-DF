@@ -102,7 +102,7 @@ export const Hoja1 = () => {
 
       <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <section className="flex min-w-0 flex-col gap-2">
-          <h3 className="m-0 text-cuerpo font-bold text-identidad">Cuentas principales</h3>
+          <h3 className="m-0 text-cuerpo font-semibold text-tinta">Cuentas principales</h3>
           {!impresion && (
             <p className="m-0 text-rotulo text-tinta-tenue">Haz clic en una cuenta para ver su comparativo anual.</p>
           )}
@@ -118,7 +118,7 @@ export const Hoja1 = () => {
                 dataIndex: "name",
                 onCell: resaltar,
                 render: (v: string, r) => (
-                  <span className={`font-semibold ${r.code === cuentaActiva?.code && !impresion ? "text-accion" : "text-identidad"}`}>
+                  <span className={`font-semibold ${r.code === cuentaActiva?.code && !impresion ? "text-accion" : "text-tinta"}`}>
                     {v}
                   </span>
                 ),
@@ -218,7 +218,7 @@ export const Hoja2 = () => {
       />
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="rounded-tarjeta border border-linea bg-superficie p-3">
-          <h3 className="m-0 mb-2 text-cuerpo font-bold text-identidad">Series a graficar:</h3>
+          <h3 className="m-0 mb-2 text-cuerpo font-semibold text-tinta">Series a graficar:</h3>
           <div className="mb-2 flex flex-wrap gap-2 print:hidden">
             <Button size="small" onClick={() => setSectores(sectores)} disabled={!sectores.length || marcados.length === sectores.length}>
               Seleccionar todo

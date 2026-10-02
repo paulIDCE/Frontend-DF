@@ -34,12 +34,12 @@ import { HOJAS } from "./paginas";
 const ENTIDAD_INICIAL = "BP. AMAZONAS";
 
 const REPORTES = [
-  { tipo: "resumen", pagina: 36, icono: BulbOutlined, titulo: "Resumen Ejecutivo", texto: "KPIs, grupo par, calificaciones y hallazgos principales", oscuro: false },
-  { tipo: "balances", pagina: 1, icono: SettingOutlined, titulo: "Balances Financieros: Principales Cuentas", texto: "Reporte detallado de los balances financieros", oscuro: true },
-  { tipo: "intermediacion", pagina: 12, icono: DatabaseOutlined, titulo: "Intermediación Financiera", texto: "Análisis de colocaciones y captaciones", oscuro: false },
-  { tipo: "indicadores", pagina: 27, icono: FileTextOutlined, titulo: "Indicadores Financieros", texto: "Métricas clave", oscuro: true },
-  { tipo: "tasas", pagina: 30, icono: SwapOutlined, titulo: "Tasas de Interés", texto: "Análisis de tasas de interés", oscuro: false },
-  { tipo: "comparativo", pagina: 31, icono: BarChartOutlined, titulo: "Comparativa de Indicadores", texto: "Comparación de métricas clave por entidad financiera", oscuro: true },
+  { tipo: "resumen", pagina: 36, icono: BulbOutlined, titulo: "Resumen Ejecutivo", texto: "KPIs, grupo par, calificaciones y hallazgos principales" },
+  { tipo: "balances", pagina: 1, icono: SettingOutlined, titulo: "Balances Financieros: Principales Cuentas", texto: "Reporte detallado de los balances financieros" },
+  { tipo: "intermediacion", pagina: 12, icono: DatabaseOutlined, titulo: "Intermediación Financiera", texto: "Análisis de colocaciones y captaciones" },
+  { tipo: "indicadores", pagina: 27, icono: FileTextOutlined, titulo: "Indicadores Financieros", texto: "Métricas clave" },
+  { tipo: "tasas", pagina: 30, icono: SwapOutlined, titulo: "Tasas de Interés", texto: "Análisis de tasas de interés" },
+  { tipo: "comparativo", pagina: 31, icono: BarChartOutlined, titulo: "Comparativa de Indicadores", texto: "Comparación de métricas clave por entidad financiera" },
 ];
 
 const cargarInfo = async (entidad: string) => {
@@ -106,11 +106,11 @@ const Analisis = () => {
     <div className="mx-auto flex max-w-[1300px] flex-col gap-6 px-6 py-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="m-0 text-display font-extrabold text-identidad">REPORTES INTERACTIVOS</h1>
+          <h1 className="m-0 text-titulo font-semibold text-identidad">Reportes interactivos</h1>
           <p className="m-0 text-tinta-tenue">Explora los reportes de forma fácil y rápida.</p>
         </div>
         <div className="flex items-center gap-3 rounded-contenedor bg-superficie px-4 py-2 shadow-tarjeta">
-          <CalendarOutlined className="text-titulo text-accion" />
+          <span className="text-titulo text-accion inline-flex"><CalendarOutlined /></span>
           <div className="flex flex-col">
             <span className="text-rotulo text-tinta-tenue">Datos actualizados</span>
             <span className="font-semibold text-tinta">{meta ? fmtVersion(meta.versionDatos) : "…"}</span>
@@ -120,14 +120,14 @@ const Analisis = () => {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
         <div className="flex flex-col gap-4">
-          <div className="rounded-contenedor bg-identidad p-5 text-tinta-inversa">
-            <div className="flex items-center gap-2 font-bold">
-              <AppstoreOutlined /> Dashboard de Calidad
+          <div className="rounded-contenedor border-t-4 border-accion bg-superficie p-4 shadow-tarjeta">
+            <div className="flex items-center gap-2 font-semibold text-tinta">
+              <span className="text-accion inline-flex"><AppstoreOutlined /></span> Dashboard de calidad
             </div>
-            <p className="m-0 mt-2 text-detalle">Seguimiento de indicadores y métricas</p>
+            <p className="m-0 mt-1 text-detalle text-tinta-tenue">Seguimiento de indicadores y métricas</p>
           </div>
           <div className="rounded-contenedor bg-superficie p-4 shadow-tarjeta">
-            <label className="mb-2 block font-semibold text-tinta">Seleccione Entidad Financiera:</label>
+            <label className="mb-2 block font-semibold text-tinta">Entidad financiera</label>
             <Select
               className="w-full"
               showSearch
@@ -139,8 +139,8 @@ const Analisis = () => {
               notFoundContent="No se encontró la entidad"
             />
             <div className="mt-4 rounded-tarjeta border border-linea p-3">
-              <div className="mb-2 flex items-center gap-2 font-bold text-identidad">
-                <BankOutlined /> {entidad}
+              <div className="mb-2 flex items-center gap-2 font-semibold text-tinta">
+                <span className="text-accion inline-flex"><BankOutlined /></span> {entidad}
               </div>
               {cargandoInfo ? (
                 <Spin size="small" />
@@ -170,14 +170,14 @@ const Analisis = () => {
               key={r.tipo}
               type="button"
               onClick={() => setRevista(r.pagina)}
-              className={`flex cursor-pointer items-center gap-4 rounded-contenedor border-0 p-5 text-left shadow-tarjeta transition-transform hover:-translate-y-0.5 ${
-                r.oscuro ? "bg-identidad text-tinta-inversa" : "bg-advertencia-sutil text-tinta"
-              }`}
+              className="flex cursor-pointer items-center gap-4 rounded-contenedor border border-linea bg-superficie p-4 text-left shadow-tarjeta transition-colors hover:border-accion hover:bg-accion-sutil"
             >
-              <r.icono className="text-cifra" />
+              <span className="inline-flex text-cifra text-accion">
+                <r.icono />
+              </span>
               <div>
-                <h4 className="m-0 text-subtitulo font-bold">{r.titulo}</h4>
-                <p className="m-0 text-detalle opacity-80">{r.texto}</p>
+                <h4 className="m-0 text-cuerpo font-semibold text-tinta">{r.titulo}</h4>
+                <p className="m-0 text-detalle text-tinta-tenue">{r.texto}</p>
               </div>
             </button>
           ))}
@@ -186,9 +186,9 @@ const Analisis = () => {
 
       <div className="flex items-center justify-between rounded-contenedor bg-superficie p-5 shadow-tarjeta">
         <div className="flex items-center gap-3">
-          <BulbOutlined className="text-cifra text-advertencia" />
+          <span className="text-cifra text-accion inline-flex"><BulbOutlined /></span>
           <div>
-            <h4 className="m-0 font-bold text-identidad">Todo lo que necesitas, en un solo lugar.</h4>
+            <h4 className="m-0 font-semibold text-tinta">Todo lo que necesitas, en un solo lugar.</h4>
             <p className="m-0 text-detalle text-tinta-tenue">Explora los reportes del equipo de forma fácil y rápida.</p>
           </div>
         </div>

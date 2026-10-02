@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import { Spin } from "antd";
-import { EstadoError, TEXTO_GRAFICA, TablaAnalitica, color, useService, type ColumnaExcel } from "@idce/kit";
+import { EstadoError, TEXTO_GRAFICA, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
 import { apiCuadro } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
 import type { CuadroApi } from "@/types/api";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
+import { COLOR_RESTA, COLOR_SUMA } from "../opciones";
 
 /**
  * Hoja "Fuentes y Usos" (`EFI04`, que hasta ahora solo estaba en el explorador; Managerial
@@ -81,7 +82,7 @@ const opcionPrincipales = (fuentes: { nombre: string; valor: number }[], usos: {
       type: "bar",
       stack: "fu",
       barMaxWidth: 18,
-      color: tipo === "Fuente" ? color.exito.base : color.error.base,
+      color: tipo === "Fuente" ? COLOR_SUMA : COLOR_RESTA,
       data: filas.map((f) => (f.tipo === tipo ? f.valor : null)),
       label: { show: etiquetas, position: "right", ...TEXTO_GRAFICA, formatter: (p: { value: number | null }) => (p.value ? fmt(p.value) : "") },
     })),
@@ -127,7 +128,7 @@ export const HojaFuentesUsos = () => {
               title: "Cuenta",
               key: "n",
               render: (_, r) => (
-                <span className={r.nivel === 0 ? "font-bold uppercase text-identidad" : r.nivel === 1 ? "font-semibold" : ""}>{r.nombre}</span>
+                <span className={r.nivel === 0 ? "font-bold uppercase text-tinta" : r.nivel === 1 ? "font-semibold" : ""}>{r.nombre}</span>
               ),
             },
             { title: fechaCorta(restarMeses(ctx.fecha, 1)), key: "a", align: "right", render: (_, r) => (r.anterior === null ? "" : fmt(r.anterior)) },

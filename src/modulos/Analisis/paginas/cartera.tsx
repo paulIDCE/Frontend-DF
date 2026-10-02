@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Segmented } from "antd";
-import { useService } from "@idce/kit";
+import { FilaKpis, useService } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
 import { NOTA_DERIVADO, NOTA_SEGMENTACION_2021, notas } from "../notas";
 import { cargarBalanceEFI06 } from "../resumenEntidades";
 import { fechaLarga, fmt, zoomRevista } from "../datos";
-import { colorSerie, opcionComparativoAnual, opcionHistorico, opcionTresCortes } from "../opciones";
+import { opcionComparativoAnual, opcionHistorico, opcionTresCortes, COLOR_ACTUAL } from "../opciones";
 
 /**
  * Hojas 12 (Intermediación) y 13-16 (cartera por segmento) — porte de
@@ -80,7 +80,7 @@ const ActivosCastigados = () => {
         yAxis: { type: "value", name: "millones USD", axisLabel: { formatter: (v: number) => fmt(v) } },
         dataZoom: zoomRevista(ctx, 12),
         series: [
-          { name: "Activos castigados", type: "bar", data, color: colorSerie(5), label: { show: etiquetas, position: "top", formatter: (p: { value: number }) => fmt(p.value) } },
+          { name: "Activos castigados", type: "bar", data, color: COLOR_ACTUAL, label: { show: etiquetas, position: "top", formatter: (p: { value: number }) => fmt(p.value) } },
         ],
       }}
       alto={300}
@@ -98,11 +98,11 @@ export const Hoja12 = () => {
         titulo="PRINCIPALES INDICADORES: COLOCACIONES DEL SISTEMA FINANCIERO NACIONAL"
         subtitulo="Colocaciones (Crédito) de la Entidad Financiera"
       />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={5} className="mb-3">
         {["IF011", "@14", "IF007", "IF009", "IF008"].map((code, i) => (
           <KpiBox key={code} titulo={KPIS_CARTERA[i]} code={code} grupoPar={code === "IF011"} />
         ))}
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <Grafica
@@ -158,13 +158,13 @@ export const Hoja12 = () => {
           <ActivosCastigados />
         </div>
         <div className="grid grid-cols-2 content-start gap-2">
-          <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" indiceColor={7} grupoPar />
-          <MiniKpi titulo="CASTIGOS (PERLAS P4)" code="P4_Castigados" tipo="line" indiceColor={5} />
-          <MiniKpi titulo="REND. CART. TOTAL" code="SB036" tipo="line" indiceColor={0} grupoPar />
-          <MiniKpi titulo="REND. CART. PRODUCTIVO" code="SB037" tipo="bar" indiceColor={2} />
-          <MiniKpi titulo="REND. CART. CONSUMO" code="SB038" tipo="line" indiceColor={3} />
-          <MiniKpi titulo="REND. CART. INMOBILIARIO" code="SB039" tipo="bar" indiceColor={6} />
-          <MiniKpi titulo="REND. CART. MICROCRÉDITO" code="SB040" tipo="line" indiceColor={1} />
+          <MiniKpi titulo="MOROSIDAD" code="IF012" tipo="bar" grupoPar />
+          <MiniKpi titulo="CASTIGOS (PERLAS P4)" code="P4_Castigados" tipo="line" />
+          <MiniKpi titulo="REND. CART. TOTAL" code="SB036" tipo="line" grupoPar />
+          <MiniKpi titulo="REND. CART. PRODUCTIVO" code="SB037" tipo="bar" />
+          <MiniKpi titulo="REND. CART. CONSUMO" code="SB038" tipo="line" />
+          <MiniKpi titulo="REND. CART. INMOBILIARIO" code="SB039" tipo="bar" />
+          <MiniKpi titulo="REND. CART. MICROCRÉDITO" code="SB040" tipo="line" />
         </div>
       </div>
     </>
@@ -189,11 +189,11 @@ const PaginaCarteraSegmento = ({ n, titulo }: { n: 1 | 2 | 3 | 4; titulo: string
   return (
     <>
       <CabeceraPagina titulo={titulo} subtitulo="Colocaciones (Crédito) de la Entidad Financiera" />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={5} className="mb-3">
         {[`IF011${s}`, c(0), `IF007${s}`, `IF009${s}`, `IF008${s}`].map((code, i) => (
           <KpiBox key={code} titulo={KPIS_CARTERA[i]} code={code} />
         ))}
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -246,7 +246,7 @@ const PaginaCarteraSegmento = ({ n, titulo }: { n: 1 | 2 | 3 | 4; titulo: string
         </div>
         <div className="grid grid-cols-2 content-start gap-2">
           {MINIS.map(([t, base], i) => (
-            <MiniKpi key={t} titulo={t} code={c(base)} tipo={i % 2 ? "line" : "bar"} indiceColor={i} sufijo="" />
+            <MiniKpi key={t} titulo={t} code={c(base)} tipo={i % 2 ? "line" : "bar"} sufijo="" />
           ))}
         </div>
       </div>

@@ -23,11 +23,15 @@ export const CeldaMoneda = ({ valor }: { valor: number | null | undefined }) => 
   <span className="font-mono text-detalle whitespace-nowrap">{fmtMoneda(valor)}</span>
 );
 
-/** Variacion en fraccion relativa (0.052 = +5.2 %) con flecha, para la segunda linea de celdas de monto. */
-const Variacion = ({ valor, etiqueta }: { valor: number | null | undefined; etiqueta: string }) => {
+/**
+ * Variacion en fraccion relativa (0.052 = +5.2 %) con flecha, para la segunda linea de celdas de monto.
+ * `subirEsMalo` (gastos, mora, provisiones) pinta en rojo las subidas, como `Delta`.
+ */
+const Variacion = ({ valor, etiqueta, subirEsMalo = false }: { valor: number | null | undefined; etiqueta: string; subirEsMalo?: boolean }) => {
   if (valor === null || valor === undefined) return null;
   const pct = valor * 100;
-  const color = pct > 0 ? "text-exito" : pct < 0 ? "text-error" : "text-tinta-tenue";
+  const favorable = subirEsMalo ? pct < 0 : pct > 0;
+  const color = pct === 0 ? "text-tinta-tenue" : favorable ? "text-exito" : "text-error";
   return (
     <Tooltip title={etiqueta === "M" ? "Variación mensual" : "Variación anual"}>
       <span className={`whitespace-nowrap ${color}`}>
@@ -42,16 +46,19 @@ export const CeldaSaldoVariacion = ({
   valor,
   mensual,
   anual,
+  subirEsMalo = false,
 }: {
   valor: number | null | undefined;
   mensual: number | null | undefined;
   anual: number | null | undefined;
+  /** En rojo las subidas (gastos, mora, provisiones). Por defecto, subir es bueno. */
+  subirEsMalo?: boolean;
 }) => (
   <div className="leading-tight text-right">
     <div className="font-mono text-detalle whitespace-nowrap">{fmtMoneda(valor)}</div>
     <div className="text-rotulo flex gap-2 justify-end">
-      <Variacion valor={mensual} etiqueta="M" />
-      <Variacion valor={anual} etiqueta="A" />
+      <Variacion valor={mensual} etiqueta="M" subirEsMalo={subirEsMalo} />
+      <Variacion valor={anual} etiqueta="A" subirEsMalo={subirEsMalo} />
     </div>
   </div>
 );

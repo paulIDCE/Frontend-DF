@@ -1,10 +1,14 @@
 import { useMemo, type ReactNode } from "react";
 import {
+  CLASE_COLUMNA_ACTIVA,
+  CeldaMoneda,
+  CeldaSaldoVariacion,
   Delta,
   KpiCard,
   MiniGrafica,
   TablaAnalitica,
   TarjetaGrafica,
+  TituloAyuda,
   arbolPorNivel,
   type ColorKit,
   type ColumnaExcel,
@@ -48,8 +52,6 @@ export const TituloBloque = ({ children, icono }: { children: ReactNode; icono?:
     {typeof children === "string" ? legible(children) : children}
   </h3>
 );
-
-const flecha = (v: number) => (v > 0 ? "▲" : v < 0 ? "▼" : "─");
 
 /** Porcentaje coloreado (los `highlight-positive/negative` del original). */
 export const Var = ({ v, invertir = false, decimales = 2 }: { v: number; invertir?: boolean; decimales?: number }) => (
@@ -159,12 +161,6 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
     { titulo: "Variación Anual", valor: (r) => r.d.varAnual, formato: "porcentaje", ancho: 14 },
   ];
 
-  const celdaVar = (v: number) => (
-    <span className={claseVar(v)}>
-      {pct(v)} {flecha(v)}
-    </span>
-  );
-
   return (
     <TablaAnalitica<FilaEstructura>
       rowKey="key"
@@ -177,7 +173,7 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
       scroll={alto ? { x: "max-content", y: alto } : { x: "max-content" }}
       columns={[
         {
-          title: "Cuentas/Meses",
+          title: "Cuenta",
           key: "n",
           fixed: "left",
           render: (_, r) => (
@@ -186,11 +182,23 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
             </span>
           ),
         },
-        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => fmt(r.d.anioAnterior) },
-        { title: fechaCorta(ctx.mesAnterior), key: "m", align: "right", render: (_, r) => fmt(r.d.mesAnterior) },
-        { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => <strong>{fmt(r.d.actual)}</strong> },
-        { title: "Variación mensual", key: "vm", align: "right", render: (_, r) => celdaVar(r.d.varMensual) },
-        { title: "Variación anual", key: "va", align: "right", render: (_, r) => celdaVar(r.d.varAnual) },
+        { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => <CeldaMoneda valor={r.d.anioAnterior} /> },
+        { title: fechaCorta(ctx.mesAnterior), key: "m", align: "right", render: (_, r) => <CeldaMoneda valor={r.d.mesAnterior} /> },
+        {
+          // Como la hoja 1: el saldo del corte lleva debajo sus variaciones mensual (M) y anual (A).
+          title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Saldo del corte con su variación mensual (M) y anual (A)" />,
+          key: "c",
+          align: "right",
+          onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+          render: (_, r) => (
+            <CeldaSaldoVariacion
+              valor={r.d.actual}
+              mensual={r.d.varMensual / 100}
+              anual={r.d.varAnual / 100}
+              subirEsMalo={sentidoDe(r.code) === "baja"}
+            />
+          ),
+        },
       ]}
     />
   );

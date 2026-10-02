@@ -25,5 +25,6 @@ export const legible = (texto: string): string => {
     if (p.length === 1 && minusculas[i - 1] === "(" && minusculas[i + 1] === ")") return p.toUpperCase();
     return p;
   });
-  return conSiglas.charAt(0).toUpperCase() + conSiglas.slice(1);
+  // Mayuscula en la primera LETRA: "5. ingresos" -> "5. Ingresos".
+  return conSiglas.replace(/\p{L}/u, (l) => l.toUpperCase());
 };

@@ -9,7 +9,8 @@ import { GRUPOS_INDICADORES } from "@/modulos/Analisis/catalogoIndicadores";
 import { ordenarPorIndicador } from "@/modulos/Analisis/grupoPar";
 import { fechaCorta, fechaLarga, fmt, restarMeses } from "@/modulos/Analisis/datos";
 import { SECTORES } from "./cargarCuadro";
-import { COLOR_ANTERIOR, COLOR_ENTIDAD, COLOR_GRUPO } from "@/modulos/Analisis/opciones";
+import { COLOR_ANTERIOR, COLOR_ENTIDAD, COLOR_GRUPO, ejeValor, tooltipSerie, unidadDeGrafica } from "@/modulos/Analisis/opciones";
+import { fmtUnidad } from "@/modulos/Analisis/unidades";
 
 /**
  * Monitor del Sistema (RADAR "Información Financiera"; plan 06, item 1.17): UN indicador para TODO
@@ -25,7 +26,6 @@ const TODOS = "__todos__";
 const cargarSectores = (code: string) => apiSeriesSistema([code]);
 const cargarEntidades = (code: string, fecha: string) => apiRanking({ cuenta: code, fecha, agrupacion: "todas" });
 
-const unidadTexto = (u: "%" | "musd") => (u === "%" ? "%" : "millones USD");
 
 const MonitorSistema = () => {
   const navigate = useNavigate();
@@ -60,6 +60,7 @@ const MonitorSistema = () => {
   const tamanos = useMemo(() => [...new Set((lista ?? []).map((e) => e.tamano))].sort(), [lista]);
   const tamanoDe = useMemo(() => new Map((lista ?? []).map((e) => [e.archivo, e.tamano])), [lista]);
   const esRatio = ind.unidad === "%";
+  const unidadEje = esRatio ? "%" : "musd";
   const filas = (ranking ? ordenarPorIndicador(ranking, ind.sentido, esRatio) : []).filter(
     (f) => f.actual !== null && (tamano === TODOS || tamanoDe.get(f.entidadId) === tamano),
   );
@@ -79,9 +80,9 @@ const MonitorSistema = () => {
   const repetido = valoresSector.length > 3 && new Set(valoresSector).size <= 2;
 
   const opcionSectores = {
-    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, valueFormatter: (v: number) => fmt(v) },
+    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, ...tooltipSerie(unidadEje) },
     grid: { left: 8, right: 40, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    xAxis: ejeValor(unidadEje),
     yAxis: { type: "category", inverse: true, data: porSector.map((s) => s.label), axisLabel: { ...TEXTO_GRAFICA, width: 200, overflow: "truncate" } },
     series: [
       {
@@ -106,11 +107,11 @@ const MonitorSistema = () => {
       axisPointer: { type: "none" },
       formatter: (ps: { dataIndex: number }[]) => {
         const f = filas[ps[0]?.dataIndex ?? 0];
-        return f ? `<strong>${f.posicion}. ${f.nombre}</strong><br/>${fmt(f.actual)} ${unidadTexto(ind.unidad)}<br/><em>Clic: abrir su revista</em>` : "";
+        return f ? `<strong>${f.posicion}. ${f.nombre}</strong><br/>${fmtUnidad(unidadEje)(f.actual)}<br/><em>Clic: abrir su revista</em>` : "";
       },
     },
     grid: { left: 8, right: 56, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    xAxis: ejeValor(unidadEje),
     yAxis: { type: "category", inverse: true, data: filas.map((f) => `${f.posicion}. ${corto(f.nombre)}`), axisLabel: TEXTO_GRAFICA },
     dataZoom: [
       { type: "slider", yAxisIndex: 0, startValue: 0, endValue: Math.max(0, visibles - 1), right: 4, width: 14, showDetail: false },
@@ -134,11 +135,11 @@ const MonitorSistema = () => {
   const desde = Math.max(0, hasta - 23);
   const periodosEvol = sectores && hasta >= 0 ? sectores.periodos.slice(desde, hasta + 1) : [];
   const opcionEvolucion = {
-    tooltip: { trigger: "axis", confine: true, valueFormatter: (v: number) => fmt(v) },
+    tooltip: { trigger: "axis", confine: true, ...tooltipSerie(unidadEje) },
     legend: { type: "scroll", bottom: 0, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: 16, top: 16, bottom: 40, containLabel: true },
     xAxis: { type: "category", data: periodosEvol.map(fechaLarga), axisLabel: { ...TEXTO_GRAFICA, rotate: 45 } },
-    yAxis: { type: "value", scale: true, name: unidadTexto(ind.unidad), axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    yAxis: { ...ejeValor(unidadEje), scale: true },
     series: porSector
       .filter((s) => s.serie)
       .map((s, i) => ({
@@ -221,7 +222,8 @@ const MonitorSistema = () => {
         <TarjetaGrafica
           titulo={`${ind.nombre} por sector - ${fechaCorta(corte)}`}
           nota={repetido ? "La fuente (base del sistema) repite el mismo valor en varios sectores para este indicador: revisar el origen." : undefined}
-          option={hayDatosSector ? opcionSectores : null}
+          subtitulo={unidadDeGrafica(opcionSectores).unidad}
+          option={hayDatosSector ? unidadDeGrafica(opcionSectores).option : null}
           textoVacio="Este indicador no está en la base del sistema por sector."
           cargando={cargandoSectores}
           alto={420}
@@ -229,7 +231,7 @@ const MonitorSistema = () => {
         />
         <TarjetaGrafica
           titulo={`${ind.nombre} por entidad - ${fechaCorta(corte)}`}
-          subtitulo="Clic en una barra para abrir la revista de la entidad"
+          subtitulo={`${unidadDeGrafica(opcionEntidades).unidad} · clic en una barra para abrir la revista de la entidad`}
           extra={
             <span className="flex items-center gap-2">
               <Select
@@ -251,7 +253,7 @@ const MonitorSistema = () => {
               />
             </span>
           }
-          option={apiError ? null : filas.length ? opcionEntidades : null}
+          option={apiError ? null : filas.length ? unidadDeGrafica(opcionEntidades).option : null}
           textoVacio={apiError ? <EstadoError error={apiError} /> : "Sin entidades con dato."}
           cargando={cargandoRanking}
           onClickPunto={(e: { dataIndex: number }) => {
@@ -270,7 +272,8 @@ const MonitorSistema = () => {
       ) : (
         <TarjetaGrafica
           titulo={`Evolución por sector - ${ind.nombre} (24 meses)`}
-          option={hayDatosSector ? opcionEvolucion : null}
+          subtitulo={unidadDeGrafica(opcionEvolucion).unidad}
+          option={hayDatosSector ? unidadDeGrafica(opcionEvolucion).option : null}
           textoVacio="Este indicador no está en la base del sistema por sector."
           alto={360}
           base100={!esRatio}

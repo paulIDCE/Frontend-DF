@@ -9,7 +9,7 @@ import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } f
 import { fechaCorta, fmt, variacion, pct } from "../datos";
 import { GRUPOS_INDICADORES, type IndicadorCatalogo } from "../catalogoIndicadores";
 import { ordenarPorIndicador, type FilaIndicador } from "../grupoPar";
-import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
+import { COLOR_ENTIDAD, COLOR_GRUPO, ejeValor, tooltipSerie } from "../opciones";
 
 /**
  * Hoja "Ranking por indicador" (RADAR tablero 7; plan 06, item 1.15). Generaliza los rankings de
@@ -27,9 +27,9 @@ const opcionBarras = (filas: FilaIndicador[], ind: IndicadorCatalogo, entidad: s
   const datos = [...visibles].reverse();
   const corto = (s: string) => (s.length > 28 ? `${s.slice(0, 26)}…` : s);
   return {
-    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, valueFormatter: (v: number) => `${fmt(v)}${ind.unidad === "%" ? " %" : ""}` },
+    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, ...tooltipSerie(ind.unidad === "%" ? "%" : "musd") },
     grid: { left: 8, right: 48, top: 8, bottom: 8, containLabel: true },
-    xAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    xAxis: ejeValor(ind.unidad === "%" ? "%" : "musd"),
     yAxis: { type: "category", data: datos.map((f) => `${f.posicion}. ${corto(f.nombre)}`), axisLabel: TEXTO_GRAFICA },
     series: [
       {

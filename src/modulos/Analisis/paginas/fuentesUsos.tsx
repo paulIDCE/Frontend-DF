@@ -7,7 +7,7 @@ import type { CuadroApi } from "@/types/api";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
-import { COLOR_RESTA, COLOR_SUMA } from "../opciones";
+import { COLOR_RESTA, COLOR_SUMA, ejeValor, tooltipSerie } from "../opciones";
 
 /**
  * Hoja "Fuentes y Usos" (`EFI04`, que hasta ahora solo estaba en el explorador; Managerial
@@ -72,10 +72,10 @@ const opcionPrincipales = (fuentes: { nombre: string; valor: number }[], usos: {
   const corto = (s: string) => (s.length > 34 ? `${s.slice(0, 32)}…` : s);
   const filas = [...fuentes.map((f) => ({ ...f, tipo: "Fuente" })), ...usos.map((u) => ({ ...u, tipo: "Uso" }))].reverse();
   return {
-    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, valueFormatter: (v: number) => fmt(v) },
+    tooltip: { trigger: "axis", confine: true, axisPointer: { type: "none" }, ...tooltipSerie("musd") },
     legend: { bottom: 0, textStyle: TEXTO_GRAFICA, data: ["Fuente", "Uso"] },
     grid: { left: 8, right: 40, top: 8, bottom: 32, containLabel: true },
-    xAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    xAxis: ejeValor("musd"),
     yAxis: { type: "category", data: filas.map((f) => `${corto(f.nombre)} (${f.tipo.toLowerCase()})`), axisLabel: TEXTO_GRAFICA },
     series: ["Fuente", "Uso"].map((tipo) => ({
       name: tipo,

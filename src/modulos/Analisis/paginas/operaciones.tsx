@@ -3,7 +3,7 @@ import { useRevista } from "../RevistaContext";
 import { LineChartOutlined } from "@ant-design/icons";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi, TituloBloque } from "../componentes";
 import { fechaLarga, fmt, pct, type Ctx, zoomRevista } from "../datos";
-import { opcionHistorico, opcionTresCortes, type SerieHistorica } from "../opciones";
+import { opcionHistorico, opcionTresCortes, type SerieHistorica, ejeValor } from "../opciones";
 
 const fmt3 = (n: number) => n.toLocaleString("es-EC", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -56,16 +56,8 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
     grid: { left: 8, right: 8, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { ...TEXTO_GRAFICA, rotate: 45 }, axisTick: { show: false } },
     yAxis: [
-      { type: "value", name: "Índice", min: "dataMin", max: "dataMax", nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt3(v) } },
-      {
-        type: "value",
-        name: "Var. Cartera Bruta Real",
-        min: "dataMin",
-        max: "dataMax",
-        nameTextStyle: TEXTO_GRAFICA,
-        axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => pct(v) },
-        splitLine: { show: false },
-      },
+      { ...ejeValor("numero"), name: "Índice de turbulencia", min: "dataMin", max: "dataMax", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt3(v) } },
+      { ...ejeValor("%"), name: "Variación anual real de la cartera (%)", min: "dataMin", max: "dataMax", splitLine: { show: false } },
     ],
     dataZoom: zoomRevista(ctx, 12),
     series: [

@@ -22,7 +22,7 @@ import {
 } from "@ant-design/icons";
 import { useRevista } from "./RevistaContext";
 import { dec, fechaCorta, fmt, pct, type Dato } from "./datos";
-import { opcionMini } from "./opciones";
+import { opcionMini, unidadDeGrafica } from "./opciones";
 import { claseVar } from "./estilos";
 import { PosicionGrupo } from "./PosicionGrupo";
 import { sentidoDe } from "./catalogoIndicadores";
@@ -273,6 +273,8 @@ const ventanaDeOpcion = (option: unknown): VentanaEje | undefined => {
 
 interface PropsGrafica {
   titulo: ReactNode;
+  /** Texto bajo el titulo; la unidad de los ejes se agrega sola. */
+  subtitulo?: ReactNode;
   nota?: ReactNode;
   option: unknown;
   alto?: number;
@@ -295,20 +297,30 @@ export const Grafica = (props: PropsGrafica) => {
   return <GraficaRevista key={String(etiquetas)} {...props} />;
 };
 
-const GraficaRevista = ({ titulo, nota, option, alto = 300, cambioTipo = true, estadisticas, base100, extra, onClickPunto }: PropsGrafica) => {
+const GraficaRevista = ({ titulo, subtitulo, nota, option, alto = 300, cambioTipo = true, estadisticas, base100, extra, onClickPunto }: PropsGrafica) => {
   const texto = typeof titulo === "string" ? legible(titulo) : titulo;
+  const { unidad, option: opcion } = useMemo(() => unidadDeGrafica(option), [option]);
   return (
     <TarjetaGrafica
       titulo={texto}
+      subtitulo={
+        subtitulo || unidad ? (
+          <>
+            {subtitulo}
+            {subtitulo && unidad ? " · " : ""}
+            {unidad}
+          </>
+        ) : undefined
+      }
       nota={nota}
-      option={option}
+      option={opcion}
       alto={alto}
       cambioTipo={cambioTipo}
       estadisticas={estadisticas}
       base100={base100}
       extra={extra}
       onClickPunto={onClickPunto}
-      zoomBase={ventanaDeOpcion(option)}
+      zoomBase={ventanaDeOpcion(opcion)}
       nombreImagen={typeof texto === "string" ? texto : "grafico"}
     />
   );
@@ -373,7 +385,7 @@ export const MiniKpi = ({
         {grupoPar ? <PosicionGrupo code={code} /> : <span />}
         <span className="text-subtitulo font-semibold text-tinta">
           {d ? fmt(d.actual) : "—"}
-          {enPuntos ? " %" : ""}
+          <span className="ml-1 text-rotulo font-normal text-tinta-tenue">{enPuntos ? "%" : "M USD"}</span>
         </span>
       </div>
       <MiniGrafica

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Segmented } from "antd";
-import { FilaKpis, useService } from "@idce/kit";
+import { FilaKpis, useService, TEXTO_GRAFICA } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
 import { NOTA_DERIVADO, NOTA_SEGMENTACION_2021, notas } from "../notas";
 import { cargarBalanceEFI06 } from "../resumenEntidades";
 import { fechaLarga, fmt, zoomRevista } from "../datos";
-import { opcionComparativoAnual, opcionHistorico, opcionTresCortes, COLOR_ACTUAL } from "../opciones";
+import { opcionComparativoAnual, opcionHistorico, opcionTresCortes, COLOR_ACTUAL, ejeValor, tooltipSerie } from "../opciones";
 
 /**
  * Hojas 12 (Intermediación) y 13-16 (cartera por segmento) — porte de
@@ -74,10 +74,10 @@ const ActivosCastigados = () => {
       titulo="Activos castigados (cuenta de orden 7103)"
       nota="Saldo de los activos castigados que la entidad mantiene en cuentas de orden. Fuente: balance EFI06."
       option={{
-        tooltip: { trigger: "axis", confine: true, valueFormatter: (v: number) => fmt(v) },
+        tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },
         grid: { left: 8, right: 16, top: 24, bottom: 50, containLabel: true },
-        xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { rotate: 45 } },
-        yAxis: { type: "value", name: "millones USD", axisLabel: { formatter: (v: number) => fmt(v) } },
+        xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { ...TEXTO_GRAFICA, rotate: 45 } },
+        yAxis: ejeValor("musd"),
         dataZoom: zoomRevista(ctx, 12),
         series: [
           { name: "Activos castigados", type: "bar", data, color: COLOR_ACTUAL, label: { show: etiquetas, position: "top", formatter: (p: { value: number }) => fmt(p.value) } },
@@ -203,9 +203,11 @@ const PaginaCarteraSegmento = ({ n, titulo }: { n: 1 | 2 | 3 | 4; titulo: string
               option={opcionHistorico(
                 ctx,
                 [
-                  { code: c(0), name: "Cart. Bruta (der)", type: "line", yAxisIndex: 0 },
-                  { code: `IF010${s}`, name: "Cart. Vencer (der)", type: "line", yAxisIndex: 0 },
-                  { code: `IF012${s}`, name: "Cart. Improductiva (izq)", type: "bar", yAxisIndex: 1 },
+                  // El original rotulaba al reves (cartera "bruta" / "por vencer" / "improductiva").
+                  // Saldo en barras y las dos lecturas de mora en lineas: las barras no tapan la cartera.
+                  { code: c(0), name: "Cartera neta", type: "bar", yAxisIndex: 0 },
+                  { code: `IF010${s}`, name: "Cartera improductiva", type: "line", yAxisIndex: 0 },
+                  { code: `IF012${s}`, name: "Morosidad", type: "line", yAxisIndex: 1 },
                 ],
                 etiquetas,
                 { izq: "millones USD", der: "porcentajes (%)" }

@@ -4,7 +4,7 @@ import { Delta, FilaKpis, FranjaSelectores, KpiCard, TEXTO_GRAFICA } from "@idce
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, seriesFlujo, variacion, zoomRevista, type Ctx } from "../datos";
-import { colorSerie } from "../opciones";
+import { colorSerie, ejeValor, tooltipSerie } from "../opciones";
 import { sentidoDe } from "../catalogoIndicadores";
 
 /**
@@ -47,11 +47,11 @@ const opcionGraficoZ = (ctx: Ctx, p: Partida, etiquetas: boolean) => {
     ...extra,
   });
   return {
-    tooltip: { trigger: "axis", confine: true, valueFormatter: (v: number | null) => (v === null || v === undefined ? "-" : fmt(v)) },
+    tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },
     legend: { bottom: 26, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: 16, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { ...TEXTO_GRAFICA, rotate: 45 }, axisTick: { show: false } },
-    yAxis: { type: "value", name: "millones USD", nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    yAxis: ejeValor("musd"),
     dataZoom: zoomRevista(ctx, 36),
     series: [
       // Orden fijo de la paleta: la serie i lleva el color i.

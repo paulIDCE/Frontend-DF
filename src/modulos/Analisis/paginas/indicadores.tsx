@@ -17,9 +17,9 @@ import {
 } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
-import { unidadDeEje, type UnidadCelda } from "../unidades";
+import { unidadDeEje, type UnidadCelda, fmtUnidad } from "../unidades";
 import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
-import { colorSerie, opcionHistorico } from "../opciones";
+import { colorSerie, opcionHistorico, ejeValor, tooltipSerie } from "../opciones";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
@@ -80,12 +80,12 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
       confine: true,
       formatter: (ps: { seriesName: string; value: number; marker: string; name: string }[]) =>
         `<strong>${ps[0]?.name}</strong><br/>` +
-        ps.filter((p) => p.seriesName).map((p) => `${p.marker}${p.seriesName}: <strong>${fmt(p.value)}%</strong>`).join("<br/>"),
+        ps.filter((p) => p.seriesName).map((p) => `${p.marker}${p.seriesName}: <strong>${fmtUnidad("%")(p.value)}</strong>`).join("<br/>"),
     },
     legend: { bottom: 26, textStyle: TEXTO_GRAFICA, data: [principal?.name, secundaria?.name, "Banda ±1SD", "Banda ±2SD"].filter(Boolean) },
     grid: { left: 8, right: 16, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), boundaryGap: false, axisLabel: { ...TEXTO_GRAFICA, rotate: 45 } },
-    yAxis: { type: "value", name: "Tasa (%)", scale: true, nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+    yAxis: { ...ejeValor("%"), scale: true },
     dataZoom: zoomRevista(ctx, 12),
     series: [
       ...banda("2SD_superior", "2SD_inferior", "Banda ±2SD", 0.2, 1),
@@ -122,6 +122,7 @@ const opcionIndicador = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean, { ad
             data: ctx.fechas.map((f) => a.ctx.valor(s.code, f)),
             color: colorSerie(i + 1),
             lineStyle: { width: 2, type: tipos[i % 3] },
+            tooltip: tooltipSerie(g.eje),
             label: { show: etiquetas, position: "top", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
           }))
       ),

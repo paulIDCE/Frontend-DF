@@ -1,6 +1,7 @@
 import { TEXTO_GRAFICA, color, conAlfa } from "@idce/kit";
 import type { Ctx } from "./datos";
 import { MESES, fechaCorta, fechaLarga, fmt, mesesDeAnios, zoomRevista } from "./datos";
+import { ROTULO_UNIDAD, fmtEje, fmtUnidad, unidadDe, type Unidad } from "./unidades";
 
 /**
  * Constructores de opciones ECharts de la revista — porte de
@@ -36,35 +37,49 @@ export const COLOR_GRUPO = S[0];
 export const COLOR_SUMA = color.exito.base;
 export const COLOR_RESTA = color.error.base;
 
-const etiqueta = (visible: boolean, extra: Record<string, unknown> = {}) => ({
+/*
+ * Unidades (`unidades.ts`): cada eje de valor lleva en `name` el rotulo de su unidad. La tarjeta de la
+ * revista (`Grafica`) lo muestra como subtitulo ("Millones USD", "Eje izq.: … · Eje der.: …") y lo
+ * quita del lienzo; las marcas del eje llevan "%" en los porcentajes y cada serie formatea su
+ * tooltip con la unidad de su eje ("522,4 M USD", "3,00 %").
+ */
+const etiqueta = (visible: boolean, unidad: Unidad = "musd", extra: Record<string, unknown> = {}) => ({
   show: visible,
   position: "top",
   ...TEXTO_GRAFICA,
-  formatter: (p: { value: number }) => fmt(p.value),
+  formatter: (p: { value: number }) => (unidad === "%" ? `${fmt(p.value)}%` : fmt(p.value)),
   ...extra,
 });
 
-const ejeValor = (nombre?: string) => ({
-  type: "value",
-  name: nombre,
-  nameTextStyle: TEXTO_GRAFICA,
-  axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) },
-  splitLine: { lineStyle: { color: color.linea.sutil, type: "dashed" } },
-});
+/** Eje de valor de una unidad (texto heredado o `Unidad`). */
+export const ejeValor = (unidadOTexto?: string | Unidad) => {
+  const u = unidadDe(unidadOTexto);
+  return {
+    type: "value",
+    name: ROTULO_UNIDAD[u],
+    nameTextStyle: TEXTO_GRAFICA,
+    axisLabel: { ...TEXTO_GRAFICA, formatter: fmtEje(u) },
+    splitLine: { lineStyle: { color: color.linea.sutil, type: "dashed" } },
+  };
+};
+
+/** Tooltip de una serie con la unidad de su eje. */
+export const tooltipSerie = (unidadOTexto?: string | Unidad) => ({ valueFormatter: fmtUnidad(unidadDe(unidadOTexto)) });
 
 /** Puntero de eje sombreado de ECharts (la palabra suelta choca con la regla de sombras de Tailwind). */
 const PUNTERO_BARRA = { type: ["sha", "dow"].join("") };
 
-const tooltipEje = { trigger: "axis", confine: true, valueFormatter: (v: number) => fmt(v) };
+const tooltipEje = { trigger: "axis", confine: true };
 
 /** Barras "Año Actual" vs "Año Anterior" por mes (hoja 1, PyG, morosidad). */
 export const opcionComparativoAnual = (
   ctx: Ctx,
   code: string,
   etiquetas: boolean,
-  { eje = "millones USD", tipo = "bar" }: { eje?: string; tipo?: "bar" | "line" } = {}
+  { eje = "musd", tipo = "bar" }: { eje?: string | Unidad; tipo?: "bar" | "line" } = {}
 ) => {
   const m = mesesDeAnios(ctx);
+  const u = unidadDe(eje);
   return {
     tooltip: { ...tooltipEje, axisPointer: PUNTERO_BARRA },
     legend: { bottom: 0, textStyle: TEXTO_GRAFICA },
@@ -72,8 +87,8 @@ export const opcionComparativoAnual = (
     xAxis: { type: "category", data: MESES, axisLabel: TEXTO_GRAFICA, axisTick: { show: false } },
     yAxis: ejeValor(eje),
     series: [
-      { name: "Año Actual", type: tipo, data: ctx.serie(code, m.actual), color: COLOR_ACTUAL, label: etiqueta(etiquetas) },
-      { name: "Año Anterior", type: tipo, data: ctx.serie(code, m.anterior), color: COLOR_ANTERIOR, label: etiqueta(etiquetas) },
+      { name: "Año actual", type: tipo, data: ctx.serie(code, m.actual), color: COLOR_ACTUAL, label: etiqueta(etiquetas, u), tooltip: tooltipSerie(u) },
+      { name: "Año anterior", type: tipo, data: ctx.serie(code, m.anterior), color: COLOR_ANTERIOR, label: etiqueta(etiquetas, u), tooltip: tooltipSerie(u) },
     ],
   };
 };
@@ -86,8 +101,9 @@ export const opcionTresCortes = (
   ctx: Ctx,
   cuentas: { code: string; name: string }[],
   etiquetas: boolean,
-  eje = "millones USD"
+  eje: string | Unidad = "musd"
 ) => {
+  const u = unidadDe(eje);
   const cortes = [
     { f: ctx.anioAnterior, c: COLOR_ANTERIOR },
     { f: ctx.mesAnterior, c: COLOR_MES_ANTERIOR },
@@ -110,7 +126,8 @@ export const opcionTresCortes = (
       barMaxWidth: 48,
       data: cuentas.map((cu) => ctx.valor(cu.code, f)),
       color: c,
-      label: etiqueta(etiquetas),
+      label: etiqueta(etiquetas, u),
+      tooltip: tooltipSerie(u),
     })),
   };
 };
@@ -128,10 +145,18 @@ export const opcionHistorico = (
   ctx: Ctx,
   series: SerieHistorica[],
   etiquetas: boolean,
-  { izq = "millones USD", der = "%", visibles = 12 }: { izq?: string; der?: string; visibles?: number } = {}
+  { izq = "musd", der = "%", visibles = 12 }: { izq?: string | Unidad; der?: string | Unidad; visibles?: number } = {}
 ) => {
   const barras = series.filter((s) => s.type === "bar").length;
   const hayDerecha = series.some((s) => s.yAxisIndex === 1);
+  const uIzq = unidadDe(izq);
+  const uDer = unidadDe(der);
+  // Con dos ejes de distinta unidad, la leyenda dice que series van en el derecho.
+  const marcarDerecha = hayDerecha && uIzq !== uDer;
+  const nombre = (s: SerieHistorica) => {
+    const limpio = s.name.replace(/\s*\((izq|der)\)\s*$/i, "");
+    return marcarDerecha && s.yAxisIndex === 1 ? `${limpio} (eje der.)` : limpio;
+  };
   return {
     tooltip: { ...tooltipEje, axisPointer: barras ? PUNTERO_BARRA : { type: "cross" } },
     legend: { type: "scroll", bottom: 26, textStyle: TEXTO_GRAFICA },
@@ -147,10 +172,12 @@ export const opcionHistorico = (
     dataZoom: zoomRevista(ctx, visibles),
     series: series.map((s, i) => {
       const tipo = s.type ?? "line";
+      const u = hayDerecha && s.yAxisIndex === 1 ? uDer : uIzq;
       return {
-        name: s.name,
+        name: nombre(s),
         type: tipo,
         yAxisIndex: hayDerecha ? (s.yAxisIndex ?? 0) : 0,
+        tooltip: tooltipSerie(u),
         data: ctx.serie(s.code),
         color: colorSerie(i),
         stack: tipo === "bar" && barras > 1 ? "total" : undefined,
@@ -158,7 +185,7 @@ export const opcionHistorico = (
         symbol: "circle",
         symbolSize: 6,
         areaStyle: tipo === "line" ? { opacity: 0.08 } : undefined,
-        label: etiqueta(etiquetas, { rotate: barras > 5 ? 90 : 0 }),
+        label: etiqueta(etiquetas, u, { rotate: barras > 5 ? 90 : 0 }),
       };
     }),
   };
@@ -179,7 +206,7 @@ export const opcionMini = (ctx: Ctx, code: string, tipo: "bar" | "line", etiquet
       axisTick: { show: false },
     },
     yAxis: { type: "value", axisLabel: { show: false }, splitLine: { show: false }, scale: true },
-    tooltip: { ...tooltipEje, valueFormatter: (v: number) => `${fmt(v)}${sufijo}` },
+    tooltip: { ...tooltipEje, valueFormatter: fmtUnidad(sufijo === "%" ? "%" : "musd") },
     series: [
       {
         type: tipo,
@@ -189,7 +216,7 @@ export const opcionMini = (ctx: Ctx, code: string, tipo: "bar" | "line", etiquet
         symbolSize: 4,
         areaStyle: tipo === "line" ? { opacity: 0.08 } : undefined,
         barWidth: "70%",
-        label: etiqueta(etiquetas, { formatter: (p: { value: number }) => `${fmt(p.value)}${sufijo}` }),
+        label: etiqueta(etiquetas, sufijo === "%" ? "%" : "musd"),
       },
     ],
   };
@@ -207,7 +234,7 @@ export interface PasoCascada {
  * positiva y negativa). El apilado de ECharts separa los signos, asi que un paso que cruza el 0
  * (resultado negativo) se dibuja bien sin series personalizadas.
  */
-export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "millones USD") => {
+export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje: string | Unidad = "musd") => {
   let acumulado = 0;
   const filas = pasos.map((p) => {
     const desde = p.total ? 0 : acumulado;
@@ -245,7 +272,7 @@ export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "m
       axisPointer: PUNTERO_BARRA,
       formatter: (ps: { dataIndex: number }[]) => {
         const f = filas[ps[0]?.dataIndex ?? 0];
-        return `<strong>${f.nombre}</strong><br/>${f.total ? "Total" : f.valor >= 0 ? "Suma" : "Resta"}: <strong>${fmt(f.valor)}</strong>`;
+        return `<strong>${f.nombre}</strong><br/>${f.total ? "Total" : f.valor >= 0 ? "Suma" : "Resta"}: <strong>${fmtUnidad(unidadDe(eje))(f.valor)}</strong>`;
       },
     },
     grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
@@ -262,4 +289,31 @@ export const opcionCascada = (pasos: PasoCascada[], etiquetas: boolean, eje = "m
       visible("neg"),
     ],
   };
+};
+
+type Eje = { type?: string; name?: string } & Record<string, unknown>;
+const comoLista = (e: unknown): Eje[] => (Array.isArray(e) ? e : e ? [e as Eje] : []);
+
+/**
+ * Unidad de la grafica a partir de los ejes de valor (`opciones.ts` pone en `name` el rotulo de la
+ * unidad): "Millones USD", o "Eje izq.: … · Eje der.: …" con dos ejes de distinta unidad. Devuelve
+ * tambien la opcion sin esos nombres: la unidad se lee en el subtitulo, no recortada en el lienzo.
+ */
+export const unidadDeGrafica = (option: unknown): { unidad?: string; option: unknown } => {
+  const o = option as { xAxis?: unknown; yAxis?: unknown } | null;
+  if (!o) return { option };
+  const ys = comoLista(o.yAxis);
+  const xs = comoLista(o.xAxis);
+  // Barras horizontales: el eje de valor es el X.
+  const enY = ys.some((e) => e.type === "value");
+  const ejes = enY ? ys : xs;
+  const nombres = ejes.filter((e) => e.type === "value" && e.name).map((e) => String(e.name));
+  if (!nombres.length) return { option };
+  const unidad =
+    new Set(nombres).size === 1 ? nombres[0] : nombres.map((n, i) => `${enY ? (i === 0 ? "Eje izq." : "Eje der.") : `Eje ${i + 1}`}: ${n}`).join(" · ");
+  const sinNombre = (lista: Eje[]) => lista.map((e) => (e.type === "value" ? { ...e, name: undefined } : e));
+  const limpio = enY
+    ? { ...o, yAxis: Array.isArray(o.yAxis) ? sinNombre(ys) : sinNombre(ys)[0] }
+    : { ...o, xAxis: Array.isArray(o.xAxis) ? sinNombre(xs) : sinNombre(xs)[0] };
+  return { unidad, option: limpio };
 };

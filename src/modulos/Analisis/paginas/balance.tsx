@@ -18,7 +18,7 @@ import { aFilasSistema } from "@/services/adaptadores";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, zoomRevista, type Dato } from "../datos";
-import { colorSerie, opcionComparativoAnual } from "../opciones";
+import { colorSerie, opcionComparativoAnual, ejeValor, tooltipSerie } from "../opciones";
 
 /** Hojas 1 (Balance General) y 2 (Evolución Histórica). */
 
@@ -181,7 +181,7 @@ export const Hoja2 = () => {
       }),
     ];
     return {
-      tooltip: { trigger: "axis", confine: true, valueFormatter: (v: number) => fmt(v) },
+      tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },
       legend: { type: "scroll", bottom: 26, textStyle: TEXTO_GRAFICA },
       grid: { left: 8, right: 16, top: 24, bottom: 80, containLabel: true },
       xAxis: {
@@ -190,7 +190,7 @@ export const Hoja2 = () => {
         boundaryGap: false,
         axisLabel: { ...TEXTO_GRAFICA, rotate: 45 },
       },
-      yAxis: { type: "value", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
+      yAxis: ejeValor("musd"),
       dataZoom: zoomRevista(ctx, 12),
       series: series.map((s, i) => ({
         ...s,

@@ -250,3 +250,54 @@ NOF, fondo de maniobra y capital circulante · periodos de maduración · audito
 | T3, T4, T6 | 8.1 |
 | T5 N organizaciones | 2.4 |
 | T7 Notas metodológicas | 1.8 |
+
+---
+
+## 9. Estado de ejecución
+
+### 9.1 Fase 1 — rama `feature/fase-1-front-datos-existentes` (02/10/2026)
+
+Hechos los 20 ítems (1.1–1.20), un commit por funcionalidad. Además, a pedido de revisión:
+
+- Estandarización visual con el kit: `KpiCard` + `Delta` en `FilaKpis`, títulos en tipo oración, identidad solo en el título de página, roles de color de las gráficas (actual / anterior, entidad / grupo, suma / resta).
+- En todas las tablas las variaciones son metadato de su valor (celda del corte con M y A debajo); tabla comparativa en la hoja 31.
+- Unidad visible en todas las gráficas (subtítulo de la tarjeta, tooltip y marcas del eje) con cinco unidades: Millones USD, USD, Porcentaje (%), Número y Veces.
+- Coma decimal en toda la revista.
+
+Verificación: `pnpm typecheck` y `pnpm lint` sin errores (los 23 avisos ya existían), `Tokens: OK`; revisión en el navegador contra BackendDF local.
+
+### 9.2 Pendientes
+
+**Validar con negocio (bloquean la Fase 4)**
+
+| Pendiente | Dónde | Notas |
+|---|---|---|
+| Sentido favorable de cada indicador | `src/modulos/Analisis/catalogoIndicadores.ts` | Provisional. Incluye los componentes CAMELS donde menor es mejor (improductivos, calidad de créditos, absorción, eficiencia operativa, IVF). Lo reemplaza el catálogo de la API (3.1) |
+| Umbrales del motor de diagnóstico | `src/modulos/Analisis/diagnostico/reglas.json` | Las reglas bancarias no tienen fuente (4.6). Los de "estructura" son los del original |
+| Umbrales de la auditoría (10 % / 25 %, 0,5 % / 2 % del activo) | `paginas/auditoria.tsx` | Editables en pantalla; calibrar por segmento (4.6) |
+| Fórmula de sostenibilidad operacional | `derivados.ts` (`DER_SOST_OPER`) | Marcada 📘 (4.8) |
+| Límite de solvencia del 9 % en el diagnóstico | `reglas.json` (`solvencia.minimo`) | Confirmar con la norma vigente (3.2) |
+
+**Datos de origen a revisar (pipeline en R / BackendDF)**
+
+| Hallazgo | Evidencia |
+|---|---|
+| `SOLVENCIA` repite el mismo valor en casi todos los sectores | `GET /sistema/series?codigos=SOLVENCIA` (el Monitor lo avisa en la gráfica) |
+| `base_estru_sistema`, `base_cartera` y `entidades/` traen meses futuros (2026-11…2027-02) | `GET /api/meta` → `advertencias`; el Monitor corta en `ultimoCorteComun` |
+| Cobertura VIS (`SB033`) da millones de % cuando la improductiva es ~0 | Se deja sin dato con improductiva < 1.000 USD (`DER_COB_VIS`) |
+| `EFI04` fuentes y usos no cuadran (fuentes ≠ usos + resultados) | Hoja 34 |
+| Saltos bruscos en CAMELS: Cobertura patrimonial 78,2 → −78,3 y Componente C 57,5 → 3,5 en un mes | BP. Pichincha, jun-26 → jul-26 |
+| `SB036` (rendimiento de la cartera) en una escala distinta (≈1.235) | BP. Pichincha, jul-26 |
+
+**Kit (`@idce/kit`)**
+
+- `Delta` y las celdas de monto (`CeldaMoneda`, `CeldaSaldoVariacion`, `fmtMoneda`, `fmtPct`) formatean en en-US (punto decimal). La revista usa sus propias `CeldaValor` / `CeldaNumero` en es-EC; conviene una opción de locale en el kit.
+- Nuevas en esta fase y a revisar por el kit: `base100` y `nota` en `TarjetaGrafica`, `subirEsMalo` en `CeldaSaldoVariacion`, `CeldaIndicadorVariacion` (con `sufijoVariacion`).
+
+**Técnicos**
+
+- `.claude/launch.json` tiene una configuración local para el puerto 3000 sin commitear: BackendDF solo acepta CORS desde el puerto 51646.
+- La rama parte de `feature/consumo-api` (front conectado a BackendDF + trabajo en curso), que no está en `origin/main`: el PR de esta rama incluye esos commits.
+- Hojas nuevas (32–36) agregadas al final del índice; el orden de lectura lo dan las secciones.
+
+**Siguiente:** Fase 2 (rama `feature/fase-2-backend-calculos`), empezando por `GET /api/benchmarks` (2.1) y `GET /api/sistema/indicador` (2.2), que reemplazan los cálculos provisionales de grupo par y Monitor de esta fase.

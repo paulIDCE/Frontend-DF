@@ -16,7 +16,7 @@ import { EstadoError, ImpresionContext, LimiteError, useService } from "@idce/ki
 import { RevistaContext, type RevistaValor } from "./RevistaContext";
 import { MESES, crearCtx, fechasDe } from "./datos";
 import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
-import { HOJAS } from "./paginas";
+import { HOJAS_ORDENADAS, SECCIONES, hojaPorNumero, seccionDe } from "./paginas";
 
 /**
  * Revista digital de 31 hojas — porte de `#digital-magazine-view` de
@@ -109,7 +109,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
     return {
       ctx: crearCtx(filas, fecha),
       entidad,
-      hoja: HOJAS[pagina - 1]?.nombre ?? "",
+      hoja: hojaPorNumero(pagina)?.nombre ?? "",
       etiquetas,
       tamano: info.tamano,
       rango: info.rango,
@@ -120,9 +120,13 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
     };
   }, [filas, fecha, entidad, pagina, etiquetas, onEntidad, sectores]);
 
-  const total = HOJAS.length;
-  const ir = (n: number) => onPagina(Math.min(total, Math.max(1, n)));
-  const hoja = HOJAS[pagina - 1];
+  // Navegacion en el orden de las secciones. Una hoja de segmento abierta por URL (14-16, 20-22)
+  // se ubica en la que la reune (13, 19).
+  const total = HOJAS_ORDENADAS.length;
+  const reunida = pagina >= 14 && pagina <= 16 ? 13 : pagina >= 20 && pagina <= 22 ? 19 : pagina;
+  const pos = Math.max(0, HOJAS_ORDENADAS.findIndex((h) => h.numero === reunida));
+  const irA = (i: number) => onPagina(HOJAS_ORDENADAS[Math.min(total - 1, Math.max(0, i))].numero);
+  const hoja = hojaPorNumero(pagina) ?? HOJAS_ORDENADAS[0];
 
   const [anio, mes] = fecha.split("-");
 
@@ -136,7 +140,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
           disabled={!valor || !!imprimiendo}
           menu={{
             items: [
-              { key: "todo", icon: <FileTextOutlined />, label: `Descargar todo (${HOJAS.length} hojas)` },
+              { key: "todo", icon: <FileTextOutlined />, label: `Descargar todo (${total} hojas)` },
               { key: "actual", icon: <FileOutlined />, label: `Descargar página actual (${pagina})` },
             ],
             onClick: ({ key }) => setImprimiendo(key as Impresion),
@@ -204,33 +208,46 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
 
       <div className="flex flex-wrap items-center justify-center gap-2 print:hidden">
         <Tooltip title="Primera">
-          <Button size="small" icon={<DoubleLeftOutlined />} onClick={() => ir(1)} disabled={pagina === 1} />
+          <Button size="small" icon={<DoubleLeftOutlined />} onClick={() => irA(0)} disabled={pos === 0} />
         </Tooltip>
-        <Button size="small" icon={<LeftOutlined />} onClick={() => ir(pagina - 1)} disabled={pagina === 1} />
+        <Button size="small" icon={<LeftOutlined />} onClick={() => irA(pos - 1)} disabled={pos === 0} />
         <Select
           size="small"
           className="w-80"
-          value={pagina}
-          options={HOJAS.map((h) => ({ value: h.numero, label: `${h.numero}. ${h.nombre}` }))}
-          onChange={ir}
+          value={HOJAS_ORDENADAS[pos].numero}
+          options={SECCIONES.map((s) => ({
+            label: s.titulo,
+            options: s.hojas.map((n) => ({
+              value: n,
+              label: `${HOJAS_ORDENADAS.findIndex((x) => x.numero === n) + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`,
+            })),
+          }))}
+          onChange={onPagina}
         />
-        <span className="text-detalle text-tinta-tenue">de {total}</span>
-        <Button size="small" icon={<RightOutlined />} onClick={() => ir(pagina + 1)} disabled={pagina === total} />
+        <span className="text-detalle text-tinta-tenue">
+          {pos + 1} de {total} · {seccionDe(reunida)}
+        </span>
+        <Button size="small" icon={<RightOutlined />} onClick={() => irA(pos + 1)} disabled={pos === total - 1} />
         <Tooltip title="Última">
-          <Button size="small" icon={<DoubleRightOutlined />} onClick={() => ir(total)} disabled={pagina === total} />
+          <Button size="small" icon={<DoubleRightOutlined />} onClick={() => irA(total - 1)} disabled={pos === total - 1} />
         </Tooltip>
       </div>
       <div className="flex flex-wrap justify-center gap-1 print:hidden">
-        {HOJAS.map((h) => (
-          <button
-            key={h.numero}
-            type="button"
-            title={`${h.numero}. ${h.nombre}`}
-            onClick={() => ir(h.numero)}
-            className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${
-              h.numero === pagina ? "bg-identidad" : "bg-linea-fuerte"
-            }`}
-          />
+        {SECCIONES.map((s) => (
+          <span key={s.titulo} className="flex gap-1 pr-2" title={s.titulo}>
+            {s.hojas.map((n) => {
+              const i = HOJAS_ORDENADAS.findIndex((x) => x.numero === n);
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  title={`${s.titulo} · ${i + 1}. ${hojaPorNumero(n)?.nombre ?? ""}`}
+                  onClick={() => irA(i)}
+                  className={`h-2.5 w-2.5 cursor-pointer rounded-full border-0 p-0 ${i === pos ? "bg-identidad" : "bg-linea-fuerte"}`}
+                />
+              );
+            })}
+          </span>
         ))}
       </div>
 
@@ -258,7 +275,7 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
                 aria-hidden
               >
                 <ImpresionContext.Provider value>
-                  {(imprimiendo === "todo" ? HOJAS : [hoja]).map((h) => (
+                  {(imprimiendo === "todo" ? HOJAS_ORDENADAS : [hoja]).map((h) => (
                     <RevistaContext.Provider key={h.numero} value={{ ...valor, hoja: h.nombre }}>
                       <article className="hoja-impresion">
                         <LimiteError>

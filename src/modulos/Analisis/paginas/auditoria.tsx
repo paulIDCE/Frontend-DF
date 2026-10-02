@@ -154,7 +154,7 @@ export const HojaAuditoria = () => {
       value={u[clave]}
       disabled={modo === "percentiles" && clave.startsWith("rel")}
       onChange={(v) => setU((x) => ({ ...x, [clave]: Number(v ?? 0) }))}
-      addonAfter={sufijo}
+      suffix={sufijo}
       className="w-28"
     />
   );

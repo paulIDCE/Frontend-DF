@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "solicitud": {
+    "texto": "Elabórame un informe de solvencia de Jardín Azuayo al último corte",
+    "tipoInforme": "solvencia",
+    "corte": "2026-08"
+  },
+  "entidad": {
+    "id": "COAC___JARDIN_AZUAYO_LIMITADA",
+    "ifiId": 48,
+    "ruc": "0190155722001",
+    "nombre": "COAC.  JARDIN AZUAYO LIMITADA",
+    "tipo": "cooperativa",
+    "tamano": "Sin Segmento",
+    "rango": "Nivel 7: 640 Millones - 2493 Millones",
+    "provincia": "Azuay"
+  },
+  "contexto": {
+    "ultimoCorte": "2026-08",
+    "versionDatos": "2026-10-05T19:49:42.516739Z",
+    "origen": { "modulo": "analisis", "hoja": 36 }
+  },
+  "usuario": { "sesion": "prueba-solvencia-001" },
+  "salida": { "formato": "html" }
+}

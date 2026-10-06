@@ -288,6 +288,7 @@ Verificación: `pnpm typecheck` y `pnpm lint` sin errores (los 23 avisos ya exis
 | `EFI04` fuentes y usos no cuadran (fuentes ≠ usos + resultados) | Hoja 34 |
 | Saltos bruscos en CAMELS: Cobertura patrimonial 78,2 → −78,3 y Componente C 57,5 → 3,5 en un mes | BP. Pichincha, jun-26 → jul-26 |
 | `SB036` (rendimiento de la cartera) en una escala distinta (≈1.235) | BP. Pichincha, jul-26 |
+| De SQL solo salen los saldos @NNNN y los 5 indicadores de solvencia; las fórmulas (anualizados, fuentes y usos, PERLAS, CAMELS, horizontal / vertical) siguen en el JSON | BackendDF, 05/10/2026 (`CONTRATO_API.md`, `/api/health`). En producción el front lo avisa con una banda por vista (`AvisoOrigenDatos`). Issues #3, #4, #8, #10, #11 y #35 |
 
 **Kit (`@idce/kit`)**
 

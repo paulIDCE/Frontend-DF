@@ -78,3 +78,18 @@ export const apiSeriesSistema = (codigos: string[], cuadros?: string[], sectores
   });
 
 export const apiMeta = () => leer<MetaApi>("/meta");
+
+export type EstadoSalud = "Healthy" | "Degraded" | "Unhealthy";
+
+/**
+ * `GET /api/health` (sin cache: se consulta en cada cambio de pantalla). Pasa a `Degraded` si SQL
+ * cae —y entonces todos los endpoints responden solo con JSON— o mientras se construye el indice.
+ * Responde `{ status, detalle }`; si el host lo sirviera como texto plano, se toma el cuerpo.
+ */
+export const apiSalud = async (): Promise<EstadoSalud> => {
+  const r = await api.get<{ status?: string } | string>("/health", { validateStatus: () => true });
+  const estado = typeof r.data === "string" ? r.data : r.data?.status ?? "";
+  if (/Unhealthy/i.test(estado)) return "Unhealthy";
+  if (/Degraded/i.test(estado)) return "Degraded";
+  return "Healthy";
+};

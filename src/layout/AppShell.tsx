@@ -4,6 +4,8 @@ import { Button, Spin } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import { useAuth } from "@/auth/AuthContext";
 import { PANTALLAS } from "@/config/app";
+import AvisoOrigenDatos from "./AvisoOrigenDatos";
+import OrigenDatosProvider from "./OrigenDatosProvider";
 
 /**
  * Shell propio de la app (header + contenido + footer).
@@ -26,7 +28,7 @@ const LoadingFallback = () => (
  * cuando el menu se envuelve en pantallas angostas, asi que se mide en vivo.
  */
 const usePublicarAlto = () => {
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -45,7 +47,6 @@ const usePublicarAlto = () => {
 const Header = () => {
   const { username, signOut } = useAuth();
   const navigate = useNavigate();
-  const ref = usePublicarAlto();
 
   const salir = async () => {
     await signOut();
@@ -53,7 +54,7 @@ const Header = () => {
   };
 
   return (
-    <header ref={ref} className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
+    <header className="flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
       <div className="flex items-center gap-3">
         <img src="/images/imgdatalux2.png" alt="Data Financiero" className="w-14 h-auto" />
         <div className="flex flex-col">
@@ -87,6 +88,17 @@ const Header = () => {
         </Button>
       </div>
     </header>
+  );
+};
+
+/** Encabezado + aviso de origen de datos: fijos arriba y medidos juntos en `--alto-encabezado`. */
+const BloqueSuperior = () => {
+  const ref = usePublicarAlto();
+  return (
+    <div ref={ref} className="sticky top-0 z-50">
+      <Header />
+      <AvisoOrigenDatos />
+    </div>
   );
 };
 
@@ -139,15 +151,17 @@ const AppShell = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-superficie-hundida">
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={<LoadingFallback />}>
-          <Outlet />
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+    <OrigenDatosProvider>
+      <div className="flex min-h-screen flex-col bg-superficie-hundida">
+        <BloqueSuperior />
+        <main className="flex-1">
+          <Suspense fallback={<LoadingFallback />}>
+            <Outlet />
+          </Suspense>
+        </main>
+        <Footer />
+      </div>
+    </OrigenDatosProvider>
   );
 };
 

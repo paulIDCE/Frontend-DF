@@ -493,6 +493,10 @@ Reemplaza el "Datos actualizados" falso del hub, que hoy muestra la hora actual.
 - `Healthy` si los archivos base están cargados y el índice de reportes está listo.
 - `Degraded` mientras el índice se construye.
 - `Unhealthy` si falta `RutaBase`.
+- Respuesta: `{ "status": "Healthy", "detalle": "..." }`.
+- Con `Datos:Sql:Habilitado = true` también pasa a `Degraded` si SQL cae: mientras tanto todos los endpoints responden solo con JSON (BackendDF, 05/10/2026). El front lo usa en la banda de origen de datos (`src/layout/AvisoOrigenDatos.tsx`).
+
+**Origen SQL / JSON por endpoint (05/10/2026).** Ningún endpoint es 100 % SQL: el orden de las filas, los títulos y el catálogo de entidades salen del JSON. De SQL salen los saldos de las cuentas @NNNN y los 5 indicadores de solvencia de EFI05. Son *mixtos* EFI01/SFN01, EFI02/SFN02, EFI05, EFI06/SFN06 (solo con el análisis "saldo"), EFI07, EFI10, `/entidades/{id}/reporte`, `/entidades/series`, `/rankings` y `/sistema/series`. El resto (macro BCE, anualizados, fuentes y usos, indicadores, CAMELS, PERLAS, cartera, tasas, SFN05/07/08) sale del JSON. Las fechas ya son las de la ventana de la BD, salvo EFI09, TPE02 y CAR03, que no salen del .sav. Mapa en el front: `origenCuadro` (`src/layout/origenDatos.ts`).
 
 ---
 

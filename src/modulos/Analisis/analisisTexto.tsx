@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { useRevista } from "./RevistaContext";
-import { fmt, type Dato } from "./datos";
+import { fmt, type Dato, pct, dec } from "./datos";
 import { PanelAnalisis, Seccion, Var } from "./componentes";
+import { UMBRALES_ESTRUCTURA } from "./diagnostico/motor";
 
 /**
  * Textos de "Análisis Dinámico" de las hojas de estructura — porte de
  * `generateDynamicAnalysis*` (3, 6, 7, 8). Mismas reglas y umbrales que el
- * original; las frases que cambian por hoja van en la configuracion.
+ * original; las frases que cambian por hoja van en la configuracion y los umbrales, en el
+ * catalogo del motor de diagnostico (`diagnostico/reglas.json`, seccion `estructura`).
  */
 
 export interface ConfigAnalisis {
@@ -31,8 +33,9 @@ export interface ConfigAnalisis {
   };
 }
 
+const { perspectiva: UMBRAL_PERSPECTIVA, concentracion: UMBRAL_CONCENTRACION } = UMBRALES_ESTRUCTURA;
+
 const tendencia = (v: number) => (v > 0 ? "crecimiento" : v < 0 ? "decrecimiento" : "estabilidad");
-const icono = (v: number) => (v > 0 ? "📈" : v < 0 ? "📉" : "➡️");
 
 export const AnalisisEstructura = ({ config: c }: { config: ConfigAnalisis }) => {
   const { ctx } = useRevista();
@@ -58,7 +61,7 @@ export const AnalisisEstructura = ({ config: c }: { config: ConfigAnalisis }) =>
         {p && (
           <>
             <p>
-              {icono(p.varMensual)} {c.principal.articulo} <strong>{c.principal.nombre}</strong> registran{" "}
+              {c.principal.articulo} <strong>{c.principal.nombre}</strong> registran{" "}
               {fmt(p.actual)} millones USD, con una variación mensual de <Var v={p.varMensual} /> y anual de{" "}
               <Var v={p.varAnual} />.
             </p>
@@ -74,7 +77,7 @@ export const AnalisisEstructura = ({ config: c }: { config: ConfigAnalisis }) =>
           {componentes.map((x) => (
             <li key={x.code}>
               <strong>{x.name}:</strong> {fmt(x.d.actual)} millones (
-              {(p ? (x.d.actual / p.actual) * 100 : 0).toFixed(1)}% del total) - Variación mensual:{" "}
+              {pct(p ? (x.d.actual / p.actual) * 100 : 0, 1)} del total) - Variación mensual:{" "}
               <Var v={x.d.varMensual} />
             </li>
           ))}
@@ -84,40 +87,40 @@ export const AnalisisEstructura = ({ config: c }: { config: ConfigAnalisis }) =>
       <Seccion tipo="hallazgos" titulo="Hallazgos Destacados">
         {mayor && mayor.d.varMensual > 0 && (
           <p>
-            ✅ <strong>{mayor.name}</strong> presenta el mayor crecimiento mensual con{" "}
-            <span className="font-semibold text-exito">+{mayor.d.varMensual.toFixed(2)}%</span>.
+            <strong>{mayor.name}</strong> presenta el mayor crecimiento mensual con{" "}
+            <span className="font-semibold text-exito">+{pct(mayor.d.varMensual)}</span>.
           </p>
         )}
         {menor && menor.d.varMensual < 0 && (
           <p>
-            ⚠️ <strong>{menor.name}</strong> registra el mayor decrecimiento mensual con{" "}
-            <span className="font-semibold text-error">{menor.d.varMensual.toFixed(2)}%</span>.
+            <strong>{menor.name}</strong> registra el mayor decrecimiento mensual con{" "}
+            <span className="font-semibold text-error">{pct(menor.d.varMensual)}</span>.
           </p>
         )}
         {pctConc !== null && c.concentracion && (
           <>
-            {pctConc > 50 && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).alta}</p>}
-            {pctConc < 30 && <p>📊 {c.concentracion.frase(pctConc.toFixed(1)).baja}</p>}
+            {pctConc > UMBRAL_CONCENTRACION.alta && <p>{c.concentracion.frase(dec(pctConc, 1)).alta}</p>}
+            {pctConc < UMBRAL_CONCENTRACION.baja && <p>{c.concentracion.frase(dec(pctConc, 1)).baja}</p>}
           </>
         )}
         {c.hallazgoExtra?.(ctx.dato)}
       </Seccion>
 
       <Seccion tipo="perspectiva" titulo="Perspectiva">
-        {p && p.varAnual > 10 ? (
+        {p && p.varAnual > UMBRAL_PERSPECTIVA.crecimientoSolido ? (
           <p>
             {c.perspectiva.sujeto} {pl ? "muestran" : "muestra"} un <strong>crecimiento anual sólido</strong> del{" "}
-            {p.varAnual.toFixed(2)}%, reflejando expansión en {c.perspectiva.expansion}.
+            {pct(p.varAnual)}, reflejando expansión en {c.perspectiva.expansion}.
           </p>
-        ) : p && p.varAnual < -5 ? (
+        ) : p && p.varAnual < UMBRAL_PERSPECTIVA.contraccion ? (
           <p>
-            🎯 {c.perspectiva.sujeto} {pl ? "presentan" : "presenta"} una <strong>contracción anual</strong> del{" "}
-            {p.varAnual.toFixed(2)}%, lo cual requiere atención en la estrategia de {c.perspectiva.estrategia}.
+            {c.perspectiva.sujeto} {pl ? "presentan" : "presenta"} una <strong>contracción anual</strong> del{" "}
+            {pct(p.varAnual)}, lo cual requiere atención en la estrategia de {c.perspectiva.estrategia}.
           </p>
         ) : (
           <p>
             {c.perspectiva.sujeto} {pl ? "mantienen" : "mantiene"} una <strong>evolución estable</strong> con
-            variación anual del {p ? p.varAnual.toFixed(2) : 0}%, dentro de parámetros normales.
+            variación anual del {pct(p ? p.varAnual : 0)}, dentro de parámetros normales.
           </p>
         )}
       </Seccion>

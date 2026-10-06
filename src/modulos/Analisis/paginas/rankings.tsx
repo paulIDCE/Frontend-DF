@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
 import { Radio, Spin, Table } from "antd";
-import { TablaAnalitica, color, useService } from "@idce/kit";
+import { CLASE_COLUMNA_ACTIVA, KpiCard, TablaAnalitica, TituloAyuda, color, useService, type ColumnaExcel } from "@idce/kit";
+import { archivoEntidad } from "@/services/datosService";
+import { apiRanking } from "@/services/apiDatos";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica } from "../componentes";
-import { claseVar } from "../estilos";
-import { fechaCorta, fmt, variacion } from "../datos";
-import { colorSerie } from "../opciones";
-import { cargarResumenEntidades, valorEntidad } from "../resumenEntidades";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, TituloBloque, useNombreDescarga } from "../componentes";
+import type { UnidadCelda } from "../unidades";
+import { legible } from "../texto";
+import { TrophyOutlined } from "@ant-design/icons";
+import { fechaCorta, fmt, pct, variacion } from "../datos";
+import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
 
 /**
  * Rankings de entidades (hojas 5, 9, 24, 25, 26) — porte de `RANKING_CONFIGS`
@@ -14,8 +17,9 @@ import { cargarResumenEntidades, valorEntidad } from "../resumenEntidades";
  * provincia; tabla con participaciones, resumen de la entidad, posicion y
  * treemap de las 20 primeras.
  *
- * Corrige el filtro "Por Provincia": el original comparaba `DPR_PA` (columna
- * inexistente) y terminaba mostrando todas las entidades; aqui usa `DPA_PR`.
+ * El ranking lo calcula la API (`GET /api/rankings`), con el filtro "Por
+ * Provincia" ya corregido: el original comparaba `DPR_PA` (columna
+ * inexistente) y terminaba mostrando todas las entidades.
  */
 
 interface ConfigRanking {
@@ -28,41 +32,67 @@ interface ConfigRanking {
 
 type Filtro = "sector" | "activos" | "provincia";
 
+const cargarRanking = (cuenta: string, fecha: string, agrupacion: Filtro, entidad: string) =>
+  apiRanking({ cuenta, fecha, agrupacion, entidad: archivoEntidad(entidad) });
+
+/** Unidad de las cuentas del resumen: morosidad en %, numero de operaciones, el resto montos. */
+const unidadResumen = (code: string): UnidadCelda =>
+  /^IF012/i.test(code) ? "%" : /^(ope_total|OPTPE)$/i.test(code) ? "numero" : "monto";
+
 const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
-  const { ctx, entidad, tamano, rango, provincia } = useRevista();
+  const { ctx, entidad } = useRevista();
   const [filtro, setFiltro] = useState<Filtro>("sector");
-  const { data: todas, isLoading } = useService(cargarResumenEntidades, [], [], true, "No se pudieron cargar las entidades");
+  // `fechaComparacion` de la API es `ctx.anioAnterior` (fecha - 12 meses).
+  const { data: respuesta, isLoading } = useService(
+    cargarRanking,
+    [c.cuenta, ctx.fecha, filtro, entidad],
+    [],
+    true,
+    "No se pudo cargar el ranking"
+  );
 
-  const ranking = useMemo(() => {
-    if (!todas) return [];
-    const ref = filtro === "sector" ? tamano : filtro === "activos" ? rango : provincia;
-    const campo = filtro === "sector" ? "tamano" : filtro === "activos" ? "rango" : "provincia";
-    const filas = todas
-      .filter((e) => e[campo] === ref)
-      .map((e) => ({
-        entidad: e.nombre,
-        anterior: valorEntidad(e, c.cuenta, ctx.anioAnterior),
-        actual: valorEntidad(e, c.cuenta, ctx.fecha),
-      }));
-    const tAnt = filas.reduce((s, f) => s + f.anterior, 0);
-    const tAct = filas.reduce((s, f) => s + f.actual, 0);
-    return filas
-      .map((f) => ({
-        ...f,
-        partAnterior: tAnt > 0 ? (f.anterior / tAnt) * 100 : 0,
-        partActual: tAct > 0 ? (f.actual / tAct) * 100 : 0,
-      }))
-      .sort((a, b) => b.partActual - a.partActual)
-      .map((f, i) => ({ ...f, posicion: i + 1 }));
-  }, [todas, filtro, tamano, rango, provincia, c.cuenta, ctx]);
+  const ranking = useMemo(
+    () =>
+      (respuesta?.filas ?? []).map((f) => ({
+        entidad: f.nombre,
+        anterior: f.anterior,
+        actual: f.actual,
+        partAnterior: f.participacionAnterior,
+        partActual: f.participacionActual,
+        posicion: f.posicion,
+      })),
+    [respuesta]
+  );
+  type FilaRanking = (typeof ranking)[number];
+  const archivo = useNombreDescarga("ranking");
+  const archivoResumen = useNombreDescarga("resumen");
+  const excelRanking: ColumnaExcel<FilaRanking>[] = [
+    { titulo: "Posición", valor: (r) => r.posicion, formato: "entero", ancho: 10 },
+    { titulo: "Entidad", valor: (r) => r.entidad, ancho: 40 },
+    { titulo: `${c.nombre} ${fechaCorta(ctx.anioAnterior)}`, valor: (r) => r.anterior, ancho: 18 },
+    { titulo: `Part. ${fechaCorta(ctx.anioAnterior)}`, valor: (r) => r.partAnterior, formato: "porcentaje", ancho: 14 },
+    { titulo: `${c.nombre} ${fechaCorta(ctx.fecha)}`, valor: (r) => r.actual, ancho: 18 },
+    { titulo: `Part. ${fechaCorta(ctx.fecha)}`, valor: (r) => r.partActual, formato: "porcentaje", ancho: 14 },
+  ];
 
-  const posicion = ranking.find((r) => r.entidad === entidad)?.posicion ?? 0;
-  const totales = {
-    anterior: ranking.reduce((s, f) => s + f.anterior, 0),
-    actual: ranking.reduce((s, f) => s + f.actual, 0),
-  };
+  const resumen = c.resumen
+    .filter((r) => ctx.fila(r.code))
+    .map((r) => {
+      const anterior = ctx.valor(r.code, ctx.anioAnterior);
+      const actual = ctx.valor(r.code);
+      return { ...r, anterior, actual, variacion: variacion(actual, anterior) };
+    });
+  type FilaResumen = (typeof resumen)[number];
+  const excelResumen: ColumnaExcel<FilaResumen>[] = [
+    { titulo: "Cuenta", valor: (r) => r.name, ancho: 28 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => r.anterior, ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => r.actual, ancho: 14 },
+    { titulo: "Variación", valor: (r) => r.variacion, formato: "porcentaje", ancho: 12 },
+  ];
 
-  const podio = [color.advertencia.base, color.datos.eje, color.advertencia.activo];
+  const posicion = respuesta?.posicionEntidad ?? 0;
+  const totales = respuesta?.total ?? { anterior: 0, actual: 0 };
+
   const treemap = {
     tooltip: {
       confine: true,
@@ -87,10 +117,11 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
           color: color.tinta.inversa,
           fontWeight: "bold",
         },
-        data: ranking.slice(0, 20).map((r, i) => ({
+        // La entidad de la revista en el color de la entidad; las demas, en el del grupo.
+        data: ranking.slice(0, 20).map((r) => ({
           name: r.entidad,
           value: Number(r.partActual.toFixed(2)),
-          itemStyle: { color: i < 3 ? podio[i] : colorSerie(i - 3) },
+          itemStyle: { color: r.entidad === entidad ? COLOR_ENTIDAD : COLOR_GRUPO },
         })),
       },
     ],
@@ -98,8 +129,7 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
 
   const claseFila = (r: { posicion: number; entidad: string }) =>
     [
-      r.entidad === entidad ? "font-bold" : "",
-      r.posicion <= 3 ? "text-advertencia-activo" : "",
+      r.entidad === entidad ? "font-semibold" : "",
     ].join(" ");
 
   return (
@@ -107,62 +137,55 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
       <CabeceraPagina titulo={c.titulo} subtitulo={c.subtitulo} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)_minmax(0,0.9fr)]">
         <div className="flex flex-col gap-3">
+          <KpiCard
+            titulo="Posición en el ranking"
+            color="accion"
+            icono={<TrophyOutlined />}
+            valor={isLoading ? "…" : posicion || "-"}
+            sufijo={respuesta ? `de ${respuesta.filas.length}` : ""}
+            pie={<span className="text-rotulo text-tinta-tenue">{c.nombre.toLowerCase()} · {fechaCorta(ctx.fecha)}</span>}
+          />
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-            <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">Filtros Ranking</h4>
+            <TituloBloque>Grupo del ranking</TituloBloque>
             <Radio.Group value={filtro} onChange={(e) => setFiltro(e.target.value)} className="flex flex-col gap-1">
-              <Radio value="sector">Por Sector Financiero</Radio>
-              <Radio value="activos">Por nivel de Activos</Radio>
-              <Radio value="provincia">Por Provincia</Radio>
+              <Radio value="sector">Mismo sector</Radio>
+              <Radio value="activos">Mismo nivel de activos</Radio>
+              <Radio value="provincia">Misma provincia</Radio>
             </Radio.Group>
           </section>
           <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-            <h4 className="m-0 mb-2 text-cuerpo font-bold text-identidad">RESUMEN DEL CUADRO</h4>
-            <table className="w-full text-detalle">
-              <thead>
-                <tr className="text-tinta-tenue">
-                  <th className="text-left">Cuenta</th>
-                  <th className="text-right">{fechaCorta(ctx.anioAnterior)}</th>
-                  <th className="text-right">{fechaCorta(ctx.fecha)}</th>
-                  <th className="text-right">Variación</th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.resumen
-                  .filter((r) => ctx.fila(r.code))
-                  .map((r) => {
-                    const a = ctx.valor(r.code, ctx.anioAnterior);
-                    const v = ctx.valor(r.code);
-                    const va = variacion(v, a);
-                    return (
-                      <tr key={r.code}>
-                        <td className="font-bold">{r.name}</td>
-                        <td className="text-right">{fmt(a)}</td>
-                        <td className="text-right font-bold">{fmt(v)}</td>
-                        <td className={`text-right ${claseVar(va)}`}>
-                          {va.toFixed(1)}% {va > 0 ? "▲" : va < 0 ? "▼" : "─"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-            <div className="mt-4 flex flex-col items-center rounded-tarjeta bg-identidad p-3 text-tinta-inversa">
-              <span className="text-display font-extrabold">{isLoading ? "…" : posicion || "-"}</span>
-              <span className="text-rotulo font-bold">POSICIÓN EN EL RANKING</span>
-            </div>
+            <TituloBloque>Resumen del cuadro</TituloBloque>
+            <TablaAnalitica<FilaResumen>
+              rowKey="code"
+              size="small"
+              pagination={false}
+              dataSource={resumen}
+              excel={{ nombre: archivoResumen, columnas: excelResumen }}
+              columns={[
+                { title: "Cuenta", render: (_, r) => <span className="font-semibold">{legible(r.name)}</span> },
+                { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} unidad={unidadResumen(r.code)} /> },
+                {
+                  title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación anual (A)" />,
+                  align: "right",
+                  onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                  render: (_, r) => <CeldaValor code={r.code} unidad={unidadResumen(r.code)} valor={r.actual} anterior={r.anterior} />,
+                },
+              ]}
+            />
           </section>
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-16">
-            <Spin description="Cargando entidades (puede tardar la primera vez)..." size="large" />
+            <Spin description="Cargando ranking..." size="large" />
           </div>
         ) : (
-          <TablaAnalitica
+          <TablaAnalitica<FilaRanking>
             rowKey="entidad"
             size="small"
             bordered
             pagination={false}
+            excel={{ nombre: archivo, columnas: excelRanking }}
             scroll={{ x: "max-content", y: 520 }}
             dataSource={ranking}
             rowClassName={claseFila}
@@ -173,18 +196,28 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
                   <strong>TOTAL</strong>
                 </Table.Summary.Cell>
                 <Table.Summary.Cell index={2} align="right">{fmt(totales.anterior)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={3} align="right">100.00%</Table.Summary.Cell>
+                <Table.Summary.Cell index={3} align="right">{pct(100)}</Table.Summary.Cell>
                 <Table.Summary.Cell index={4} align="right">{fmt(totales.actual)}</Table.Summary.Cell>
-                <Table.Summary.Cell index={5} align="right">100.00%</Table.Summary.Cell>
+                <Table.Summary.Cell index={5} align="right">{pct(100)}</Table.Summary.Cell>
               </Table.Summary.Row>
             )}
             columns={[
               { title: "Posición", dataIndex: "posicion", width: 80, align: "center" },
               { title: "Entidad", dataIndex: "entidad" },
-              { title: `${c.nombre} ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => fmt(r.anterior) },
-              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => `${r.partAnterior.toFixed(2)}%` },
-              { title: `${c.nombre} ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => fmt(r.actual) },
-              { title: `Part. ${fechaCorta(ctx.fecha)}`, align: "right", render: (_, r) => `${r.partActual.toFixed(2)}%` },
+              { title: `${legible(c.nombre)} ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} /> },
+              { title: `Part. ${fechaCorta(ctx.anioAnterior)}`, align: "right", render: (_, r) => <CeldaNumero valor={r.partAnterior} unidad="%" /> },
+              {
+                title: <TituloAyuda titulo={`${legible(c.nombre)} ${fechaCorta(ctx.fecha)}`} ayuda="Valor del corte con su variación anual (A)" />,
+                align: "right",
+                onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                render: (_, r) => <CeldaValor code={c.cuenta} unidad="monto" valor={r.actual} anterior={r.anterior} />,
+              },
+              {
+                title: <TituloAyuda titulo={`Part. ${fechaCorta(ctx.fecha)}`} ayuda="Participación del corte con su cambio anual (A) en puntos" />,
+                align: "right",
+                onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+                render: (_, r) => <CeldaValor code={c.cuenta} unidad="%" valor={r.partActual} anterior={r.partAnterior} />,
+              },
             ]}
           />
         )}

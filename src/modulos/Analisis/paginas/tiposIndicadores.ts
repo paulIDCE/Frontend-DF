@@ -12,6 +12,8 @@ export type TipoSerieVolatilidad =
 export interface GraficoIndicador {
   titulo: string;
   subtitulo?: string;
+  /** Nota metodológica (ícono ⓘ). */
+  nota?: string;
   /** Tasa de equilibrio con bandas de volatilidad. */
   volatilidad?: boolean;
   eje: string;

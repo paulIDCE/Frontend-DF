@@ -4,6 +4,7 @@ import { useService } from "@idce/kit";
 import Explorador from "@/modulos/Explorador/Explorador";
 import { buscarPorCuadro } from "@/modulos/Explorador/arbol";
 import type { NodoCuadro } from "@/modulos/Explorador/tipos";
+import { origenCuadro, useReportarOrigen } from "@/layout/origenDatos";
 import {
   ANALISIS,
   CREDITOS,
@@ -51,6 +52,7 @@ const ExploradorSistema = ({ arbol, cuadroInicial, creditos = CREDITOS.map((c) =
   const tipo = nodo?.tipo ?? "tabla";
   const id = nodo?.cuadro ?? cuadroInicial;
   const visibles = controlesDe(tipo);
+  useReportarOrigen(origenCuadro(id, filtros.analisis));
 
   const { data, isLoading, apiError, execute } = useService(
     cargarCuadroSistema,

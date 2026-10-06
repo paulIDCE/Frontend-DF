@@ -1,21 +1,15 @@
 import { useMemo } from "react";
-import { Button, Checkbox, Tooltip } from "antd";
 import type { TableColumnsType } from "antd";
-import {
-  FileTextOutlined,
-  FolderOpenOutlined,
-  FolderOutlined,
-  LineChartOutlined,
-  ShoppingCartOutlined,
-} from "@ant-design/icons";
-import { EmptyState, TablaAnalitica } from "@idce/kit";
+import { FileTextOutlined, FolderOpenOutlined, FolderOutlined } from "@ant-design/icons";
+import { EmptyState, TablaAnalitica, type ColumnaExcel } from "@idce/kit";
 import type { FilaCuadro } from "./tipos";
-import { etiquetaPeriodo, fmtValor } from "./datos";
+import { etiquetaPeriodo, fmtValor, numero } from "./datos";
+import { columnasAcciones, type PropsTablaSeries } from "./accionesTabla";
 
 /**
  * Estados financieros detallados (SFN06 / EFI06) — porte de
  * `renderBalancesTableOptimized`: arbol de cuentas por prefijo de
- * `Codigo_Base` y `Nivel`, contraido por defecto, con columna "Código".
+ * `Codigo_Base` y `Nivel`, contraido por defecto (con expandir / contraer todo) y columna "Código".
  */
 
 interface NodoBalance {
@@ -53,17 +47,7 @@ const arbolBalances = (filas: FilaCuadro[]): NodoBalance[] => {
   return raices.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
 };
 
-interface Props {
-  filas: FilaCuadro[];
-  periodos: string[];
-  seleccionados: Set<number>;
-  onSeleccionar: (indice: number, marcado: boolean) => void;
-  onGraficar: (indice: number) => void;
-  onCarrito: (indice: number) => void;
-  alto?: number;
-}
-
-const TablaBalances = ({ filas, periodos, seleccionados, onSeleccionar, onGraficar, onCarrito, alto = 520 }: Props) => {
+const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: PropsTablaSeries) => {
   const datos = useMemo(() => arbolBalances(filas), [filas]);
 
   const columnas: TableColumnsType<NodoBalance> = [
@@ -85,37 +69,7 @@ const TablaBalances = ({ filas, periodos, seleccionados, onSeleccionar, onGrafic
         </span>
       ),
     },
-    {
-      title: "Selec.",
-      key: "sel",
-      width: 56,
-      align: "center",
-      render: (_, r) => (
-        <Checkbox checked={seleccionados.has(r.indice)} onChange={(e) => onSeleccionar(r.indice, e.target.checked)} />
-      ),
-    },
-    {
-      title: "Graf.",
-      key: "graf",
-      width: 56,
-      align: "center",
-      render: (_, r) => (
-        <Tooltip title="Graficar">
-          <Button type="text" size="small" icon={<LineChartOutlined />} onClick={() => onGraficar(r.indice)} />
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Carrito",
-      key: "carrito",
-      width: 64,
-      align: "center",
-      render: (_, r) => (
-        <Tooltip title="Añadir al carrito">
-          <Button type="text" size="small" icon={<ShoppingCartOutlined />} onClick={() => onCarrito(r.indice)} />
-        </Tooltip>
-      ),
-    },
+    ...columnasAcciones<NodoBalance>(acciones, (r) => r.indice),
     ...periodos.map((p) => ({
       title: etiquetaPeriodo(p),
       key: p,
@@ -131,6 +85,16 @@ const TablaBalances = ({ filas, periodos, seleccionados, onSeleccionar, onGrafic
     },
   ];
 
+  const columnasExcel: ColumnaExcel<NodoBalance>[] = [
+    { titulo: "Código", valor: (r) => r.codigo, ancho: 14 },
+    { titulo: "Cuenta Contable", valor: (r) => String(r.fila.Variable ?? ""), ancho: 56 },
+    ...periodos.map<ColumnaExcel<NodoBalance>>((p) => ({
+      titulo: etiquetaPeriodo(p),
+      valor: (r) => numero(r.fila[p]),
+      ancho: 12,
+    })),
+  ];
+
   if (periodos.length === 0) return <EmptyState mensaje="Sin datos en el período seleccionado" />;
 
   return (
@@ -140,7 +104,10 @@ const TablaBalances = ({ filas, periodos, seleccionados, onSeleccionar, onGrafic
       dataSource={datos}
       pagination={false}
       bordered
+      arbol="contraido"
       indentSize={20}
+      excel={{ nombre: nombreExcel, columnas: columnasExcel }}
+      barra={acciones.barra}
       scroll={{ x: "max-content", y: alto }}
     />
   );

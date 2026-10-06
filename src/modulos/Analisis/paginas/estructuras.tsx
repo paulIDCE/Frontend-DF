@@ -1,7 +1,7 @@
 import { useRevista } from "../RevistaContext";
 import { PanelAnalisis, Seccion, Var } from "../componentes";
 import { AnalisisEstructura } from "../analisisTexto";
-import { fmt, variacion } from "../datos";
+import { fmt, variacion, pct } from "../datos";
 import PaginaEstructura, { type ConfigEstructura } from "./PaginaEstructura";
 
 /**
@@ -121,12 +121,12 @@ const AnalisisImproductivo = () => {
       <Seccion tipo="resumen" titulo="Resumen General">
         {ctx.fila("SB003") && (
           <p>
-            📊 Los <strong>Activos Improductivos Brutos</strong> registran {fmt(ctx.valor("SB003"))} millones USD.
+            Los <strong>Activos Improductivos Brutos</strong> registran {fmt(ctx.valor("SB003"))} millones USD.
           </p>
         )}
         {ctx.fila("SB008") && (
           <p>
-            ⚠️ Las <strong>Provisiones Totales</strong> ascienden a {fmt(ctx.valor("SB008"))} millones USD.
+            Las <strong>Provisiones Totales</strong> ascienden a {fmt(ctx.valor("SB008"))} millones USD.
           </p>
         )}
         {ctx.fila("SB004") && (
@@ -147,7 +147,7 @@ const AnalisisImproductivo = () => {
             .filter(([code]) => ctx.fila(code))
             .map(([code, nombre]) => (
               <li key={code}>
-                <strong>{nombre}:</strong> {fmt(ctx.valor(code))} millones ({((ctx.valor(code) / total) * 100).toFixed(1)}%)
+                <strong>{nombre}:</strong> {fmt(ctx.valor(code))} millones ({pct((ctx.valor(code) / total) * 100, 1)})
               </li>
             ))}
         </ul>
@@ -359,14 +359,14 @@ const EXIGIBLES: ConfigEstructura = {
           if (ratio > 2)
             return (
               <p>
-                📊 Los <strong>depósitos a corto plazo (1-30 días)</strong> representan más del doble que los de largo
+                Los <strong>depósitos a corto plazo (1-30 días)</strong> representan más del doble que los de largo
                 plazo, indicando alta liquidez pero mayor volatilidad en la captación.
               </p>
             );
           if (ratio < 0.5)
             return (
               <p>
-                📊 Los <strong>depósitos a largo plazo (más de 361 días)</strong> predominan sobre los de corto plazo,
+                Los <strong>depósitos a largo plazo (más de 361 días)</strong> predominan sobre los de corto plazo,
                 indicando mayor estabilidad en la base de captación.
               </p>
             );

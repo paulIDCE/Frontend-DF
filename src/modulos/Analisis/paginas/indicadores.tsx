@@ -1,15 +1,39 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Checkbox, Radio, Select, Spin, Tabs } from "antd";
-import { TEXTO_GRAFICA, TablaAnalitica, color, conAlfa, inicioZoom, showToast, useService, zoomTemporal } from "@idce/kit";
-import { leerJson } from "@/services/datosService";
+import { Checkbox, Segmented, Select, Spin, Tabs } from "antd";
+import {
+  CLASE_COLUMNA_ACTIVA,
+  FranjaSelectores,
+  TEXTO_GRAFICA,
+  TablaAnalitica,
+  TabsAnaliticas,
+  TituloAyuda,
+  arbolPorNivel,
+  color,
+  conAlfa,
+  showToast,
+  useImpresion,
+  useService,
+  type ColumnaExcel,
+} from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica } from "../componentes";
-import { claseVar } from "../estilos";
-import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte } from "../datos";
-import { colorSerie, opcionHistorico } from "../opciones";
-import { cargarResumenEntidades, rutaReporte } from "../resumenEntidades";
+import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
+import { unidadDeEje, type UnidadCelda, fmtUnidad } from "../unidades";
+import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
+import { colorSerie, opcionHistorico, ejeValor, tooltipSerie } from "../opciones";
+import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
+import { COMPLEMENTARIOS_27 } from "./indicadoresComplementarios";
+import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
+import { calificacion } from "../calificacion";
+import { legible } from "../texto";
+import {
+  NAVEGACION_27,
+  NAVEGACION_29,
+  NAVEGACION_30,
+  NAVEGACION_31,
+  type NavegacionIndicadores,
+} from "./navegacionIndicadores";
 
 /**
  * Hojas 27 (Indicadores Financieros), 28 (CAMELS - PERLAS), 29 (Evolución
@@ -27,7 +51,7 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
     const s = por(sup);
     const i = por(inf);
     if (!s || !i || !ctx.fila(s.code) || !ctx.fila(i.code)) return [];
-    const c = color.datos.series[0];
+    const c = color.datos.eje;
     return [
       // Superior rellena hacia abajo; inferior "corta" con el fondo: queda la franja.
       { name: nombre, type: "line", data: ctx.serie(s.code), symbol: "none", z, lineStyle: { width: 1, type: "dashed", color: c }, color: c, areaStyle: { color: conAlfa(c, alfa) } },
@@ -56,18 +80,18 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
       confine: true,
       formatter: (ps: { seriesName: string; value: number; marker: string; name: string }[]) =>
         `<strong>${ps[0]?.name}</strong><br/>` +
-        ps.filter((p) => p.seriesName).map((p) => `${p.marker}${p.seriesName}: <strong>${fmt(p.value)}%</strong>`).join("<br/>"),
+        ps.filter((p) => p.seriesName).map((p) => `${p.marker}${p.seriesName}: <strong>${fmtUnidad("%")(p.value)}</strong>`).join("<br/>"),
     },
     legend: { bottom: 26, textStyle: TEXTO_GRAFICA, data: [principal?.name, secundaria?.name, "Banda ±1SD", "Banda ±2SD"].filter(Boolean) },
     grid: { left: 8, right: 16, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), boundaryGap: false, axisLabel: { ...TEXTO_GRAFICA, rotate: 45 } },
-    yAxis: { type: "value", name: "Tasa (%)", scale: true, nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt(v) } },
-    dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, 12)),
+    yAxis: { ...ejeValor("%"), scale: true },
+    dataZoom: zoomRevista(ctx, 12),
     series: [
       ...banda("2SD_superior", "2SD_inferior", "Banda ±2SD", 0.2, 1),
       ...banda("1SD_superior", "1SD_inferior", "Banda ±1SD", 0.35, 3),
-      ...linea(principal, color.datos.series[7], "solid"),
-      ...linea(secundaria, color.datos.series[0], "dashed"),
+      ...linea(principal, color.datos.series[0], "solid"),
+      ...linea(secundaria, color.datos.series[1], "dashed"),
     ],
   };
 };
@@ -98,6 +122,7 @@ const opcionIndicador = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean, { ad
             data: ctx.fechas.map((f) => a.ctx.valor(s.code, f)),
             color: colorSerie(i + 1),
             lineStyle: { width: 2, type: tipos[i % 3] },
+            tooltip: tooltipSerie(g.eje),
             label: { show: etiquetas, position: "top", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
           }))
       ),
@@ -105,82 +130,153 @@ const opcionIndicador = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean, { ad
   };
 };
 
+/** Rejilla de graficas de una categoria. */
+const GraficasCategoria = ({ cat, extra, alto }: { cat: CategoriaIndicadores; extra?: ExtraSeries; alto: number }) => {
+  const { ctx, etiquetas } = useRevista();
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {cat.graficos.map((g, i) => (
+        <Grafica
+          key={`${cat.key}-${i}`}
+          titulo={g.titulo}
+          nota={g.nota}
+          option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
+          alto={alto}
+          cambioTipo={!g.volatilidad}
+          base100={!g.volatilidad}
+        />
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Categorias de indicadores en dos niveles, con las piezas que el kit pide para esto
+ * (`docs/VISTAS_ANALITICAS.md`): el grupo en un `Segmented` rotulado (`FranjaSelectores`) y la
+ * categoria en `TabsAnaliticas` ("contenidos distintos, uno a la vez"). Reemplaza la tira de hasta
+ * 11 botones en mayusculas del original. En el PDF salen todas las categorias, cada una con su titulo.
+ */
 const RejillaIndicadores = ({
   categorias,
+  navegacion,
   extra,
   alto = 280,
   lateral,
+  pie,
 }: {
   categorias: CategoriaIndicadores[];
+  navegacion: NavegacionIndicadores;
   extra?: ExtraSeries;
   alto?: number;
   lateral?: ReactNode;
+  /** Contenido bajo las graficas de cada categoria (tabla comparativa de la hoja 31). */
+  pie?: (cat: CategoriaIndicadores) => ReactNode;
 }) => {
-  const { ctx, etiquetas } = useRevista();
-  const [activa, setActiva] = useState(categorias[0].key);
-  const cat = categorias.find((c) => c.key === activa) ?? categorias[0];
-  return (
-    <>
-      <Radio.Group
-        value={activa}
-        onChange={(e) => setActiva(e.target.value)}
-        optionType="button"
-        buttonStyle="solid"
-        size="small"
-        className="mb-3 flex flex-wrap gap-1"
-        options={categorias.map((c) => ({ value: c.key, label: c.etiqueta }))}
+  const impresion = useImpresion();
+  const porKey = useMemo(() => new Map(categorias.map((c) => [c.key, c])), [categorias]);
+  // Solo los items con categoria en la configuracion (y los grupos que queden con alguno).
+  const grupos = useMemo(
+    () =>
+      navegacion.grupos
+        .map((g) => ({ ...g, items: g.items.filter((i) => porKey.has(i.key)) }))
+        .filter((g) => g.items.length > 0),
+    [navegacion, porKey],
+  );
+  const [grupoKey, setGrupoKey] = useState(grupos[0]?.key);
+  const grupo = grupos.find((g) => g.key === grupoKey) ?? grupos[0];
+  const [elegidas, setElegidas] = useState<Record<string, string>>({});
+  const activa = elegidas[grupo?.key ?? ""] ?? grupo?.items[0]?.key;
+
+  if (!grupo) return null;
+
+  const contenido = impresion ? (
+    <div className="flex flex-col gap-4">
+      {grupos.flatMap((g) =>
+        g.items.map((item) => (
+          <section key={`${g.key}-${item.key}`} className="flex flex-col gap-2">
+            <h3 className="m-0 text-cuerpo font-semibold text-tinta">
+              {grupos.length > 1 ? `${g.titulo} · ` : ""}
+              {item.titulo}
+            </h3>
+            <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />
+            {pie?.(porKey.get(item.key)!)}
+          </section>
+        )),
+      )}
+    </div>
+  ) : (
+    <div className="flex min-w-0 flex-col gap-2">
+      {grupos.length > 1 && (
+        <FranjaSelectores
+          grupos={[
+            {
+              rotulo: navegacion.rotulo,
+              control: (
+                <Segmented
+                  value={grupo.key}
+                  onChange={(v) => setGrupoKey(String(v))}
+                  options={grupos.map((g) => ({ value: g.key, label: `${g.titulo} (${g.items.length})` }))}
+                />
+              ),
+            },
+          ]}
+        />
+      )}
+      <TabsAnaliticas
+        key={grupo.key}
+        activa={activa}
+        onCambiar={(k) => setElegidas((e) => ({ ...e, [grupo.key]: k }))}
+        pestanas={grupo.items.map((item) => ({
+          key: item.key,
+          titulo: item.titulo,
+          contenido: (
+            <div className="flex flex-col gap-3">
+              <GraficasCategoria cat={porKey.get(item.key)!} extra={extra} alto={alto} />
+              {pie?.(porKey.get(item.key)!)}
+            </div>
+          ),
+        }))}
       />
-      <div className={lateral ? "grid grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]" : ""}>
-        {lateral}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {cat.graficos.map((g, i) => (
-            <Grafica
-              key={`${cat.key}-${i}`}
-              titulo={g.titulo}
-              option={opcionIndicador(ctx, g, etiquetas, extra ?? {})}
-              alto={alto}
-              cambioTipo={!g.volatilidad}
-            />
-          ))}
-        </div>
-      </div>
-    </>
+    </div>
+  );
+
+  return lateral ? (
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
+      {lateral}
+      {contenido}
+    </div>
+  ) : (
+    contenido
   );
 };
+
+const CATEGORIAS_27 = [...INDICADORES_27, ...COMPLEMENTARIOS_27];
 
 export const Hoja27 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS" subtitulo="Métricas clave de desempeño financiero" />
-    <RejillaIndicadores categorias={INDICADORES_27} />
+    <div className="mb-3">
+      <PanelDiagnostico />
+    </div>
+    <RejillaIndicadores categorias={CATEGORIAS_27} navegacion={NAVEGACION_27} />
   </>
 );
 
 export const Hoja29 = () => (
   <>
     <CabeceraPagina titulo="INDICADORES FINANCIEROS CAMELS - PERLAS" subtitulo="Evolución del desempeño financiero" />
-    <RejillaIndicadores categorias={INDICADORES_29} />
+    <RejillaIndicadores categorias={INDICADORES_29} navegacion={NAVEGACION_29} />
   </>
 );
 
 export const Hoja30 = () => (
   <>
-    <CabeceraPagina titulo="TASAS DE INTERÉS ACTIVAS Y PASIVAS" subtitulo="Evolución de las tasas de interes activas y pasivas" />
-    <RejillaIndicadores categorias={INDICADORES_30} alto={340} />
+    <CabeceraPagina titulo="TASAS DE INTERÉS ACTIVAS Y PASIVAS" subtitulo="Evolución de las tasas de interés activas y pasivas" />
+    <RejillaIndicadores categorias={INDICADORES_30} navegacion={NAVEGACION_30} alto={340} />
   </>
 );
 
 /* ------------------------------ Hoja 28 ------------------------------ */
-
-const calificacion = (v: number) =>
-  v >= 80
-    ? { letra: "A", texto: "A - Excelente", clase: "bg-exito" }
-    : v >= 60
-      ? { letra: "B", texto: "B - Muy Bueno", clase: "bg-accion" }
-      : v >= 50
-        ? { letra: "C", texto: "C - Saludable", clase: "bg-advertencia" }
-        : v >= 40
-          ? { letra: "D", texto: "D - Regular", clase: "bg-pdf" }
-          : { letra: "E", texto: "E - Alto Riesgo", clase: "bg-error" };
 
 const LEYENDA = [
   ["A", "Excelente (≥80%)"],
@@ -245,30 +341,63 @@ const PERLAS: Indicador[] = [
   ["efic_perlas_acum", "EFICIENCIA GLOBAL EN PERLAS", "-", 1],
 ];
 
-/** Tabla de indicadores: variaciones en puntos porcentuales (`renderTablaIndicadoresGenerico`). */
-const TablaIndicadores = ({ filas }: { filas: Indicador[] }) => {
+type FilaIndicador = { code: string; nombre: string; meta: string; nivel: 1 | 2 };
+
+/**
+ * Tabla de indicadores: variaciones en puntos porcentuales (`renderTablaIndicadoresGenerico`). Los
+ * indicadores de nivel 2 cuelgan del componente (nivel 1) anterior: arbol con expandir / contraer.
+ */
+const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: string }) => {
   const { ctx } = useRevista();
-  const datos = filas.filter(([code]) => ctx.fila(code));
-  const pp = (v: number) => (
-    <span className={claseVar(v)}>
-      {v.toFixed(2)} pp {v > 0 ? "▲" : v < 0 ? "▼" : "─"}
-    </span>
+  const archivo = useNombreDescarga(nombre);
+  const datos = useMemo(
+    () =>
+      arbolPorNivel<FilaIndicador>(
+        filas.filter(([code]) => ctx.fila(code)).map(([code, n, meta, nivel]) => ({ code, nombre: n, meta, nivel })),
+        (r) => r.nivel,
+      ),
+    [filas, ctx],
   );
+  const vm = (r: FilaIndicador) => ctx.valor(r.code) - ctx.valor(r.code, ctx.mesAnterior);
+  const va = (r: FilaIndicador) => ctx.valor(r.code) - ctx.valor(r.code, ctx.anioAnterior);
+  const excel: ColumnaExcel<FilaIndicador>[] = [
+    { titulo: "Indicador", valor: (r) => r.nombre, ancho: 48 },
+    { titulo: "Meta", valor: (r) => r.meta, ancho: 18 },
+    { titulo: fechaCorta(ctx.anioAnterior), valor: (r) => ctx.valor(r.code, ctx.anioAnterior), ancho: 14 },
+    { titulo: fechaCorta(ctx.mesAnterior), valor: (r) => ctx.valor(r.code, ctx.mesAnterior), ancho: 14 },
+    { titulo: fechaCorta(ctx.fecha), valor: (r) => ctx.valor(r.code), ancho: 14 },
+    { titulo: "Var. Mensual (pp)", valor: vm, ancho: 14 },
+    { titulo: "Var. Anual (pp)", valor: va, ancho: 14 },
+  ];
   return (
-    <TablaAnalitica
-      rowKey={(r) => r[0]}
+    <TablaAnalitica<FilaIndicador>
+      rowKey="code"
       dataSource={datos}
       pagination={false}
       bordered
+      arbol="expandido"
+      excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content", y: 460 }}
       columns={[
-        { title: "Indicador", render: (_, r) => <span className={r[3] === 1 ? "font-bold text-identidad" : "pl-3"}>{r[1]}</span> },
-        { title: "Meta", render: (_, r) => r[2] },
-        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r[0], ctx.anioAnterior)) },
-        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => fmt(ctx.valor(r[0], ctx.mesAnterior)) },
-        { title: fechaCorta(ctx.fecha), align: "right", render: (_, r) => <strong>{fmt(ctx.valor(r[0]))}</strong> },
-        { title: "Var. Mensual", align: "right", render: (_, r) => pp(ctx.valor(r[0]) - ctx.valor(r[0], ctx.mesAnterior)) },
-        { title: "Var. Anual", align: "right", render: (_, r) => pp(ctx.valor(r[0]) - ctx.valor(r[0], ctx.anioAnterior)) },
+        { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : "text-tinta"}>{legible(r.nombre)}</span> },
+        { title: "Meta", render: (_, r) => <span className="text-detalle text-tinta-secundaria">{r.meta}</span> },
+        { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.anioAnterior)} unidad="%" /> },
+        { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.mesAnterior)} unidad="%" /> },
+        {
+          // Como la hoja 1 y la PyG: el valor del corte lleva debajo sus variaciones M y A, en puntos.
+          title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación mensual (M) y anual (A) en puntos" />,
+          align: "right",
+          onCell: () => ({ className: CLASE_COLUMNA_ACTIVA }),
+          render: (_, r) => (
+            <CeldaValor
+              code={r.code}
+              unidad="%"
+              valor={ctx.valor(r.code)}
+              mesAnterior={ctx.valor(r.code, ctx.mesAnterior)}
+              anterior={ctx.valor(r.code, ctx.anioAnterior)}
+            />
+          ),
+        },
       ]}
     />
   );
@@ -283,7 +412,7 @@ const Calificaciones = ({ code, titulo, subtitulo, puntaje }: { code: string; ti
   ];
   return (
     <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-      <h3 className="m-0 text-subtitulo font-bold text-identidad">{titulo}</h3>
+      <h3 className="m-0 text-subtitulo font-semibold text-tinta">{legible(titulo)}</h3>
       <p className="m-0 mb-3 text-detalle text-tinta-tenue">{subtitulo}</p>
       <div className="flex justify-around gap-2">
         {cortes.map(([f, rot]) => {
@@ -297,8 +426,8 @@ const Calificaciones = ({ code, titulo, subtitulo, puntaje }: { code: string; ti
               <span className="text-rotulo text-tinta-tenue">
                 {rot} · {fechaCorta(f)}
               </span>
-              <span className="text-detalle font-semibold">{v.toFixed(2)}%</span>
-              {puntaje && <span className="text-rotulo text-tinta-secundaria">Puntaje: {ctx.valor(puntaje, f).toFixed(2)}</span>}
+              <span className="text-detalle font-semibold">{pct(v)}</span>
+              {puntaje && <span className="text-rotulo text-tinta-secundaria">Puntaje: {dec(ctx.valor(puntaje, f))}</span>}
             </div>
           );
         })}
@@ -346,7 +475,7 @@ export const Hoja28 = () => {
                     alto={300}
                   />
                 </div>
-                <TablaIndicadores filas={CAMELS} />
+                <TablaIndicadores filas={CAMELS} nombre="CAMELS" />
               </div>
             ),
           },
@@ -373,7 +502,7 @@ export const Hoja28 = () => {
                     alto={300}
                   />
                 </div>
-                <TablaIndicadores filas={PERLAS} />
+                <TablaIndicadores filas={PERLAS} nombre="PERLAS" />
               </div>
             ),
           },
@@ -387,11 +516,85 @@ export const Hoja28 = () => {
 
 const MAX_ADICIONALES = 3;
 
-const cargarAdicional = async (nombre: string) => ({ nombre, filas: await leerJson<FilaReporte[]>(rutaReporte(nombre)) });
+const cargarAdicional = async (nombre: string) => ({ nombre, filas: await cargarReporte(nombre) });
+
+interface FilaComparativa {
+  key: string;
+  code: string;
+  nombre: string;
+  unidad: UnidadCelda;
+}
+
+/**
+ * Tabla comparativa de la hoja 31: los indicadores de la categoria (filas) para la entidad de la
+ * revista y las elegidas (columnas). Como en la hoja 1, cada celda es el valor al corte con sus
+ * variaciones mensual y anual debajo (plan 06: las variaciones son metadato de su valor).
+ */
+const TablaComparativa = ({ cat, adicionales }: { cat: CategoriaIndicadores; adicionales: { nombre: string; ctx: Ctx }[] }) => {
+  const { ctx, entidad } = useRevista();
+  const archivo = useNombreDescarga(`comparativo_${cat.key}`);
+  const filas: FilaComparativa[] = cat.graficos.flatMap((g) =>
+    g.series
+      .filter((s) => !s.tipo)
+      .map((s) => ({
+        key: `${g.titulo}-${s.code}`,
+        code: s.code,
+        nombre: g.series.length > 1 ? `${legible(g.titulo)} · ${s.name ?? s.code}` : legible(g.titulo),
+        unidad: unidadDeEje(g.eje),
+      })),
+  );
+  const entidades = [{ nombre: entidad, ctx }, ...adicionales];
+  const celda = (c: Ctx, r: FilaComparativa) =>
+    c.fila(r.code) ? (
+      <CeldaValor
+        code={r.code}
+        unidad={r.unidad}
+        valor={c.valor(r.code, ctx.fecha)}
+        mesAnterior={c.valor(r.code, ctx.mesAnterior)}
+        anterior={c.valor(r.code, ctx.anioAnterior)}
+      />
+    ) : (
+      <span className="text-tinta-tenue">-</span>
+    );
+  const excel: ColumnaExcel<FilaComparativa>[] = [
+    { titulo: "Indicador", valor: (r) => r.nombre, ancho: 48 },
+    ...entidades.flatMap(({ nombre, ctx: c }): ColumnaExcel<FilaComparativa>[] => [
+      { titulo: `${nombre} ${fechaCorta(ctx.fecha)}`, valor: (r) => c.valor(r.code, ctx.fecha), ancho: 16 },
+      { titulo: `${nombre} var. mensual`, valor: (r) => c.valor(r.code, ctx.fecha) - c.valor(r.code, ctx.mesAnterior), ancho: 14 },
+      { titulo: `${nombre} var. anual`, valor: (r) => c.valor(r.code, ctx.fecha) - c.valor(r.code, ctx.anioAnterior), ancho: 14 },
+    ]),
+  ];
+  return (
+    <TablaAnalitica<FilaComparativa>
+      rowKey="key"
+      size="small"
+      bordered
+      pagination={false}
+      dataSource={filas}
+      excel={{ nombre: archivo, columnas: excel }}
+      scroll={{ x: "max-content" }}
+      columns={[
+        { title: "Indicador", key: "n", fixed: "left", render: (_, r) => <span className="text-tinta">{r.nombre}</span> },
+        ...entidades.map(({ nombre, ctx: c }, i) => ({
+          title: (
+            <TituloAyuda
+              titulo={nombre}
+              ayuda={`${fechaCorta(ctx.fecha)} con su variación mensual (M) y anual (A); en los porcentajes, en puntos`}
+            />
+          ),
+          key: nombre,
+          align: "right" as const,
+          onCell: () => ({ className: i === 0 ? CLASE_COLUMNA_ACTIVA : "" }),
+          render: (_: unknown, r: FilaComparativa) => celda(c, r),
+        })),
+      ]}
+    />
+  );
+};
 
 export const Hoja31 = () => {
   const { ctx, entidad } = useRevista();
-  const { data: todas, isLoading } = useService(cargarResumenEntidades, [], [], true, "No se pudieron cargar las entidades");
+  const { data: todas, isLoading } = useService(cargarListaEntidades, [], [], true, "No se pudieron cargar las entidades");
   const [filtros, setFiltros] = useState({ tamano: "todos", provincia: "todos", rango: "todos" });
   const [elegidas, setElegidas] = useState<{ nombre: string; filas: FilaReporte[] }[]>([]);
 
@@ -448,7 +651,7 @@ export const Hoja31 = () => {
 
   const lateral = (
     <aside className="flex flex-col gap-3 rounded-tarjeta border border-linea bg-superficie p-3">
-      <h4 className="m-0 text-cuerpo font-bold text-identidad">Filtros de Búsqueda para Comparación</h4>
+      <h4 className="m-0 text-cuerpo font-semibold text-tinta">Filtros de Búsqueda para Comparación</h4>
       {filtro("tamano", "Tamaño/Segmento")}
       {filtro("provincia", "Provincia")}
       {filtro("rango", "Nivel de Activos")}
@@ -482,7 +685,13 @@ export const Hoja31 = () => {
   return (
     <>
       <CabeceraPagina titulo="COMPARATIVO CON OTRAS ENTIDADES FINANCIERAS" subtitulo="Análisis comparativo de indicadores clave" />
-      <RejillaIndicadores categorias={INDICADORES_31} extra={{ adicionales }} lateral={lateral} />
+      <RejillaIndicadores
+        categorias={INDICADORES_31}
+        navegacion={NAVEGACION_31}
+        extra={{ adicionales }}
+        lateral={lateral}
+        pie={(cat) => <TablaComparativa cat={cat} adicionales={adicionales} />}
+      />
     </>
   );
 };

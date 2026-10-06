@@ -1,25 +1,28 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Button, Drawer, Dropdown, Modal, Select, Spin, Tree } from "antd";
+import { Button, Drawer, Modal, Select, Skeleton, Spin, Tabs, Tooltip, Tree } from "antd";
 import type { TreeDataNode } from "antd";
-import { DownloadOutlined, FileExcelOutlined, FileTextOutlined, InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
-import { EstadoError, TarjetaGrafica, showToast, type ErrorPresentable } from "@idce/kit";
-import type { CuadroCargado, ItemCarrito, NodoCuadro, SerieColeccion } from "./tipos";
-import { etiquetaPeriodo, rangoPorDefecto, unionPeriodos } from "./datos";
-import { opcionSeries } from "./graficas";
-import { descargarCsv, descargarExcel } from "./descargas";
-import { useCarrito } from "./useCarrito";
+import { FileTextOutlined, InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
+import { BarraExpandirArbol, EstadoError, TarjetaGrafica, showToast, type ErrorPresentable } from "@idce/kit";
+import type { CuadroCargado, ItemFavorito, NodoCuadro, SerieColeccion } from "./tipos";
+import { etiquetaPeriodo, nivelFila, rangoPorDefecto, unionPeriodos } from "./datos";
+import { opcionSeries, ventanaSeries } from "./graficas";
+import { descargarCsv, nombreDescarga } from "./descargas";
+import { idFavorito, useFavoritos } from "./useFavoritos";
 import TablaCuadro from "./TablaCuadro";
 import TablaBalances from "./TablaBalances";
 import PanelColeccion from "./PanelColeccion";
-import CarritoModal from "./CarritoModal";
+import FavoritosModal from "./FavoritosModal";
 
 /**
  * Explorador de cuadros compartido por Macro, Sistema Financiero y Tasas
- * (layout de prueba-data: arbol "Contenidos" + tabla + "Mi Colección").
+ * (layout de prueba-data: arbol "Contenidos" + tabla + grafico comparativo).
  *
  * Es presentacional respecto a los datos: cada pantalla decide como cargar el
  * cuadro (y aporta sus `controles`: sector, entidad, analisis...). Aqui vive
- * el estado de la vista: periodo, coleccion, carrito y modales.
+ * el estado de la vista: periodo, coleccion, favoritos y modales.
+ *
+ * "Contenidos": cada raiz del arbol es una pestaña; dentro, el arbol desde el
+ * nivel 1 con expandir / contraer todo.
  */
 
 const MAX_SERIES = 10;
@@ -54,6 +57,48 @@ const buscarNodo = (nodos: NodoCuadro[], key: string): NodoCuadro | undefined =>
   return undefined;
 };
 
+/** Titulos de las ramas de "Contenidos" que llevan a `key` (sin el propio nodo). */
+const rutaContenidos = (nodos: NodoCuadro[], key: string, camino: string[] = []): string[] | null => {
+  for (const n of nodos) {
+    if (n.key === key) return camino;
+    const r = n.hijos && rutaContenidos(n.hijos, key, [...camino, n.titulo]);
+    if (r) return r;
+  }
+  return null;
+};
+
+const normal = (t: unknown) => String(t ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+
+/**
+ * Cuentas ancestro de la fila `indice`: hacia atras, la ultima de cada nivel menor dentro del
+ * mismo grupo (vale para cuadros por grupos y para balances por codigo). Si el grupo no es ya la
+ * primera cuenta, encabeza la ruta.
+ */
+const rutaDeFila = (filas: CuadroCargado["filas"], indice: number): string[] => {
+  const fila = filas[indice];
+  const grupo = fila.Grupo ?? "";
+  let nivel = nivelFila(fila);
+  const ruta: string[] = [];
+  for (let i = indice - 1; i >= 0 && nivel > 0; i--) {
+    const f = filas[i];
+    if ((f.Grupo ?? "") !== grupo) break;
+    const n = nivelFila(f);
+    if (n < nivel) {
+      ruta.unshift(String(f.Variable ?? ""));
+      nivel = n;
+    }
+  }
+  if (grupo && normal(grupo) !== normal(ruta[0] ?? fila.Variable)) ruta.unshift(grupo);
+  return ruta;
+};
+
+/** Claves de los nodos con hijos (para "Expandir todo"). */
+const clavesRama = (nodos: NodoCuadro[]): string[] =>
+  nodos.flatMap((n) => (n.hijos ? [n.key, ...clavesRama(n.hijos)] : []));
+
+/** Raiz (pestaña) a la que pertenece `key`: `n-1-0-2` -> `n-1`. */
+const raizDe = (key?: string) => (key ? key.split("-").slice(0, 2).join("-") : undefined);
+
 /** Claves de los ancestros de `key` (para abrir el arbol en el cuadro activo). */
 const ancestros = (key?: string): string[] => {
   if (!key) return [];
@@ -67,10 +112,14 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
   const [coleccion, setColeccion] = useState<SerieColeccion[]>([]);
   const [serieModal, setSerieModal] = useState<SerieColeccion | null>(null);
   const [etiquetasModal, setEtiquetasModal] = useState(false);
-  const [carritoAbierto, setCarritoAbierto] = useState(false);
-  const carrito = useCarrito();
+  const [favoritosAbierto, setFavoritosAbierto] = useState(false);
+  const favoritos = useFavoritos();
 
-  const datosArbol = useMemo(() => aArbolAntd(arbol), [arbol]);
+  const [pestana, setPestana] = useState(() => raizDe(nodoActivo) ?? arbol[0]?.key);
+  const raizActiva = arbol.find((r) => r.key === pestana) ?? arbol[0];
+  const datosArbol = useMemo(() => aArbolAntd(raizActiva?.hijos ?? []), [raizActiva]);
+  const ramasPestana = useMemo(() => clavesRama(raizActiva?.hijos ?? []), [raizActiva]);
+  const tituloNodo = (nodoActivo && buscarNodo(arbol, nodoActivo)?.titulo) || "";
 
   // --- Periodo Desde / Hasta ---
   const periodos = useMemo(() => (cuadro ? unionPeriodos(cuadro.filas) : []), [cuadro]);
@@ -80,20 +129,13 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
     eleccion && eleccion.base === periodos ? eleccion.rango : rangoPorDefecto(periodos);
   const setRango = (fn: (r: [string, string]) => [string, string]) =>
     setEleccion({ base: periodos, rango: fn(rango) });
-  const visibles = useMemo(
-    () => periodos.filter((p) => p >= rango[0] && p <= rango[1]),
-    [periodos, rango]
-  );
+  const [desde, hasta] = rango;
+  const rangoMemo = useMemo<[string, string]>(() => [desde, hasta], [desde, hasta]);
+  const visibles = useMemo(() => periodos.filter((p) => p >= desde && p <= hasta), [periodos, desde, hasta]);
   const opcionesPeriodo = periodos.map((p) => ({ value: p, label: etiquetaPeriodo(p) }));
 
-  // Como en el original, cambiar de cuadro vacia la coleccion (el carrito persiste).
-  const cuadroId = cuadro?.id;
-  const [cuadroColeccion, setCuadroColeccion] = useState(cuadroId);
-  if (cuadroColeccion !== cuadroId) {
-    setCuadroColeccion(cuadroId);
-    setColeccion([]);
-  }
-
+  // A diferencia del original, el grafico comparativo se conserva al cambiar de cuadro o de
+  // filtros: se pueden comparar series de cuadros distintos (cada una lleva su origen).
   const prefijo = cuadro ? `${cuadro.id}_${cuadro.sector ?? ""}_` : "";
   const seleccionados = useMemo(
     () =>
@@ -103,14 +145,25 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
     [coleccion, prefijo]
   );
 
+  /** Donde vive la fila: cuentas ancestro y ramas de "Contenidos". */
+  const ubicacionDeFila = (indice: number) =>
+    cuadro
+      ? {
+          ruta: rutaDeFila(cuadro.filas, indice),
+          contenidos: (nodoActivo && rutaContenidos(arbol, nodoActivo)) || undefined,
+        }
+      : {};
+
   const serieDeFila = (indice: number): SerieColeccion | null => {
     const fila = cuadro?.filas[indice];
     if (!cuadro || !fila) return null;
     return {
+      ...ubicacionDeFila(indice),
       id: `${prefijo}${indice}`,
       variable: String(fila.Variable ?? ""),
       fila,
       cuadroId: cuadro.id,
+      cuadroNombre: cuadro.titulo || cuadro.id,
       unidad: cuadro.unidad,
       sectorNombre: cuadro.sectorNombre,
       derecha: false,
@@ -118,27 +171,37 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
     };
   };
 
-  const agregarSerie = (serie: SerieColeccion): boolean => {
-    if (coleccion.some((s) => s.id === serie.id)) return false;
-    if (coleccion.length >= MAX_SERIES) {
-      showToast.warning("Máximo 10 series en el panel. Elimina alguna para agregar otra.");
-      return false;
-    }
-    setColeccion((c) => [...c, serie]);
-    return true;
-  };
+  // Los checkbox se deshabilitan al llegar al maximo: aqui no hace falta avisar.
+  const lleno = coleccion.length >= MAX_SERIES;
 
   const onSeleccionar = (indice: number, marcado: boolean) => {
     const serie = serieDeFila(indice);
     if (!serie) return;
-    if (marcado) agregarSerie(serie);
+    if (marcado) setColeccion((c) => (c.length >= MAX_SERIES || c.some((s) => s.id === serie.id) ? c : [...c, serie]));
     else setColeccion((c) => c.filter((s) => s.id !== serie.id));
   };
 
-  const onCarrito = (indice: number) => {
+  /** Quita del panel las series del cuadro actual. */
+  const deseleccionarTodo = () => setColeccion((c) => c.filter((s) => !s.id.startsWith(prefijo)));
+
+  /** Una sola serie en el eje derecho: la nueva reemplaza a la anterior. */
+  const cambiarSerie = (id: string, cambios: Partial<Pick<SerieColeccion, "derecha" | "tipo">>) => {
+    if (cambios.derecha) {
+      const anterior = coleccion.find((s) => s.derecha && s.id !== id);
+      const nueva = coleccion.find((s) => s.id === id);
+      if (anterior && nueva)
+        showToast.info(`«${nueva.variable}» pasa al eje derecho; «${anterior.variable}» vuelve al eje izquierdo.`);
+      setColeccion((c) => c.map((s) => (s.id === id ? { ...s, ...cambios } : { ...s, derecha: false })));
+      return;
+    }
+    setColeccion((c) => c.map((s) => (s.id === id ? { ...s, ...cambios } : s)));
+  };
+
+  const itemDeFila = (indice: number): ItemFavorito | null => {
     const fila = cuadro?.filas[indice];
-    if (!cuadro || !fila) return;
-    const item: ItemCarrito = {
+    if (!cuadro || !fila) return null;
+    return {
+      ...ubicacionDeFila(indice),
       index: indice,
       variable: String(fila.Variable ?? ""),
       cuadroId: cuadro.id,
@@ -147,31 +210,61 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
       sectorNombre: cuadro.sectorNombre,
       data: fila,
     };
-    if (carrito.agregar(item)) showToast.success(`"${item.variable}" añadida al carrito.`);
-    else showToast.warning(`La serie "${item.variable}" ya se encuentra en el carrito.`);
   };
 
-  const idDeItem = (item: ItemCarrito) => `${item.cuadroId}_${item.sector ?? ""}_${item.index}`;
+  const esFavorito = (indice: number) => {
+    const item = itemDeFila(indice);
+    return !!item && favoritos.es(item);
+  };
 
-  const alPanelDesdeCarrito = (item: ItemCarrito) => {
-    const ok = agregarSerie({
-      id: idDeItem(item),
+  const onFavorito = (indice: number) => {
+    const item = itemDeFila(indice);
+    if (!item) return;
+    if (favoritos.alternar(item)) showToast.success(`"${item.variable}" guardada en favoritos.`);
+    else showToast.info(`"${item.variable}" quitada de favoritos.`);
+  };
+
+  const enPanel = useMemo(() => new Set(coleccion.map((s) => s.id)), [coleccion]);
+
+  /** El modal ya valida que quepan (y avisa por cuantas se pasa). */
+  const alPanelDesdeFavoritos = (items: ItemFavorito[]) => {
+    const nuevas: SerieColeccion[] = items.map((item) => ({
+      id: idFavorito(item),
       variable: item.variable,
       fila: item.data,
       cuadroId: item.cuadroId,
       cuadroNombre: item.cuadroNombre,
       unidad: item.data.Unidad,
       sectorNombre: item.sectorNombre,
+      ruta: item.ruta,
+      contenidos: item.contenidos,
       derecha: false,
       tipo: "line",
-    });
-    if (ok) showToast.success(`"${item.variable}" añadida al panel de gráficos.`);
+    }));
+    setColeccion((c) => [...c, ...nuevas.filter((n) => !c.some((s) => s.id === n.id))].slice(0, MAX_SERIES));
+    showToast.success(
+      nuevas.length === 1
+        ? `"${nuevas[0].variable}" añadida al gráfico comparativo.`
+        : `${nuevas.length} series añadidas al gráfico comparativo.`
+    );
   };
 
   const opcionModal = useMemo(
-    () => (serieModal ? opcionSeries([serieModal], { etiquetas: etiquetasModal, visibles: Number.MAX_SAFE_INTEGER }) : null),
-    [serieModal, etiquetasModal]
+    () => (serieModal ? opcionSeries([serieModal], { etiquetas: etiquetasModal, rango: rangoMemo }) : null),
+    [serieModal, etiquetasModal, rangoMemo]
   );
+  const zoomModal = useMemo(
+    () => (serieModal ? ventanaSeries([serieModal], rangoMemo) : undefined),
+    [serieModal, rangoMemo]
+  );
+
+  /** Abre "Contenidos" en la pestaña y la rama del cuadro activo. */
+  const abrirContenidos = () => {
+    const raiz = raizDe(nodoActivo);
+    if (raiz) setPestana(raiz);
+    setExpandidos((e) => [...new Set([...e, ...ancestros(nodoActivo)])]);
+    setArbolAbierto(true);
+  };
 
   const elegir = (key: React.Key) => {
     const nodo = buscarNodo(arbol, String(key));
@@ -181,16 +274,68 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
     }
   };
 
+  /** Tabla del cuadro, o su esqueleto mientras llega el primero. */
+  const contenido = () => {
+    if (error)
+      return (
+        <div className="flex flex-col items-center gap-3">
+          <EstadoError error={error} />
+          {onReintentar && <Button onClick={onReintentar}>Reintentar</Button>}
+        </div>
+      );
+    if (cargando && !cuadro) return <Skeleton active title={false} paragraph={{ rows: 12 }} />;
+    if (!cuadro || cuadro.filas.length === 0)
+      return (
+        <div className="py-16 text-center text-tinta-tenue">
+          No se encontraron datos{cuadro ? ` para: ${cuadro.id}` : ""}
+        </div>
+      );
+    const props = {
+      filas: cuadro.filas,
+      periodos: visibles,
+      seleccionados,
+      lleno,
+      maximo: MAX_SERIES,
+      onSeleccionar,
+      onDeseleccionarTodo: deseleccionarTodo,
+      onGraficar: (i: number) => setSerieModal(serieDeFila(i)),
+      esFavorito,
+      onFavorito,
+      nombreExcel: nombreDescarga(cuadro),
+      barra: (
+        <Tooltip title="Descargar CSV">
+          <Button
+            size="small"
+            type="text"
+            icon={<FileTextOutlined />}
+            aria-label="Descargar CSV"
+            onClick={() => descargarCsv(cuadro, visibles)}
+          />
+        </Tooltip>
+      ),
+    };
+    // Al cambiar de cuadro o de filtro la tabla anterior se queda atenuada bajo el indicador: sin
+    // saltos de altura ni un "sin datos" de paso.
+    return (
+      <Spin spinning={cargando} description="Cargando datos..." size="large">
+        {cuadro.vista === "arbol" ? <TablaBalances {...props} /> : <TablaCuadro {...props} />}
+      </Spin>
+    );
+  };
+
   return (
     <div className="grid grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_380px]">
       <main className="flex min-w-0 flex-col gap-3 rounded-contenedor bg-superficie p-4 shadow-tarjeta">
         <div className="flex items-start gap-3">
-          <Button icon={<MenuOutlined />} onClick={() => setArbolAbierto(true)}>
+          <Button icon={<MenuOutlined />} onClick={abrirContenidos}>
             Contenidos
           </Button>
           <div className="min-w-0 flex-1">
-            <h2 className="m-0 text-titulo font-bold text-identidad">{cuadro?.titulo || " "}</h2>
-            {cuadro?.unidad && <p className="m-0 text-detalle text-tinta-tenue">{cuadro.unidad}</p>}
+            {/* Mientras carga, el titulo del cuadro elegido (no el del anterior). */}
+            <h2 className="m-0 text-titulo font-bold text-identidad">
+              {(cargando ? tituloNodo : cuadro?.titulo || tituloNodo) || "\u00a0"}
+            </h2>
+            {!cargando && cuadro?.unidad && <p className="m-0 text-detalle text-tinta-tenue">{cuadro.unidad}</p>}
           </div>
         </div>
 
@@ -203,7 +348,7 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
               className="w-32"
               value={rango[0] || undefined}
               options={opcionesPeriodo}
-              disabled={!periodos.length}
+              disabled={!periodos.length || cargando}
               onChange={(v: string) => setRango(([, h]) => [v, v > h ? v : h])}
               showSearch
             />
@@ -215,55 +360,16 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
               className="w-32"
               value={rango[1] || undefined}
               options={opcionesPeriodo}
-              disabled={!periodos.length}
+              disabled={!periodos.length || cargando}
               onChange={(v: string) => setRango(([d]) => [v < d ? v : d, v])}
               showSearch
             />
           </label>
-          <Dropdown
-            disabled={!cuadro?.filas.length}
-            menu={{
-              items: [
-                { key: "xlsx", icon: <FileExcelOutlined />, label: "Excel (.xlsx)" },
-                { key: "csv", icon: <FileTextOutlined />, label: "CSV (.csv)" },
-              ],
-              onClick: ({ key }) => cuadro && (key === "xlsx" ? descargarExcel(cuadro) : descargarCsv(cuadro)),
-            }}
-          >
-            <Button size="small" className="ml-auto" icon={<DownloadOutlined />}>
-              Descargar tabla
-            </Button>
-          </Dropdown>
         </div>
 
-        {error ? (
-          <div className="flex flex-col items-center gap-3">
-            <EstadoError error={error} />
-            {onReintentar && <Button onClick={onReintentar}>Reintentar</Button>}
-          </div>
-        ) : cargando ? (
-          <div className="flex justify-center py-16">
-            <Spin size="large" description="Cargando datos..." />
-          </div>
-        ) : !cuadro || cuadro.filas.length === 0 ? (
-          <div className="py-16 text-center text-tinta-tenue">
-            No se encontraron datos{cuadro ? ` para: ${cuadro.id}` : ""}
-          </div>
-        ) : (
-          (() => {
-            const props = {
-              filas: cuadro.filas,
-              periodos: visibles,
-              seleccionados,
-              onSeleccionar,
-              onGraficar: (i: number) => setSerieModal(serieDeFila(i)),
-              onCarrito,
-            };
-            return cuadro.vista === "arbol" ? <TablaBalances {...props} /> : <TablaCuadro {...props} />;
-          })()
-        )}
+        {contenido()}
 
-        {cuadro && cuadro.notas.length > 0 && (
+        {!cargando && cuadro && cuadro.notas.length > 0 && (
           <section className="rounded-tarjeta border border-linea bg-superficie-sutil p-3">
             <h4 className="m-0 mb-2 flex items-center gap-2 text-cuerpo font-bold text-identidad">
               <InfoCircleOutlined /> Notas del Cuadro
@@ -279,20 +385,36 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
 
       <PanelColeccion
         series={coleccion}
-        totalCarrito={carrito.items.length}
-        onAbrirCarrito={() => setCarritoAbierto(true)}
-        onCambiar={(id, cambios) => setColeccion((c) => c.map((s) => (s.id === id ? { ...s, ...cambios } : s)))}
+        maximo={MAX_SERIES}
+        rango={rangoMemo}
+        totalFavoritos={favoritos.items.length}
+        onAbrirFavoritos={() => setFavoritosAbierto(true)}
+        onCambiar={cambiarSerie}
         onGraficar={setSerieModal}
         onQuitar={(id) => setColeccion((c) => c.filter((s) => s.id !== id))}
+        onQuitarTodas={() => setColeccion([])}
       />
 
       <Drawer
         title="Contenidos"
         placement="left"
-        width={420}
+        size={440}
         open={arbolAbierto}
         onClose={() => setArbolAbierto(false)}
       >
+        {arbol.length > 1 ? (
+          <Tabs
+            activeKey={raizActiva?.key}
+            onChange={setPestana}
+            items={arbol.map((r) => ({ key: r.key, label: r.titulo }))}
+          />
+        ) : (
+          raizActiva && <h4 className="m-0 mb-3 text-cuerpo font-bold text-identidad">{raizActiva.titulo}</h4>
+        )}
+        <BarraExpandirArbol
+          onExpandir={() => setExpandidos((e) => [...new Set([...e, ...ramasPestana])])}
+          onContraer={() => setExpandidos((e) => e.filter((k) => !ramasPestana.includes(String(k))))}
+        />
         <Tree
           treeData={datosArbol}
           showLine
@@ -300,13 +422,12 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
           selectedKeys={nodoActivo ? [nodoActivo] : []}
           expandedKeys={expandidos}
           onExpand={setExpandidos}
-          onSelect={(keys, info) => {
+          onSelect={(_, info) => {
             if (info.node.isLeaf) elegir(info.node.key);
             else
               setExpandidos((e) =>
                 e.includes(info.node.key) ? e.filter((k) => k !== info.node.key) : [...e, info.node.key]
               );
-            void keys;
           }}
         />
       </Drawer>
@@ -323,6 +444,7 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
           titulo={serieModal?.variable ?? ""}
           subtitulo={serieModal?.unidad}
           option={opcionModal}
+          zoomBase={zoomModal}
           alto={420}
           cambioTipo
           etiquetas={{ activas: etiquetasModal, alternar: () => setEtiquetasModal((v) => !v) }}
@@ -330,14 +452,15 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
         />
       </Modal>
 
-      <CarritoModal
-        abierto={carritoAbierto}
-        items={carrito.items}
-        enPanel={(item) => coleccion.some((s) => s.id === idDeItem(item))}
-        onCerrar={() => setCarritoAbierto(false)}
-        onAlPanel={alPanelDesdeCarrito}
-        onQuitar={carrito.quitar}
-        onVaciar={carrito.vaciar}
+      <FavoritosModal
+        abierto={favoritosAbierto}
+        items={favoritos.items}
+        enPanel={enPanel}
+        maximo={MAX_SERIES}
+        onCerrar={() => setFavoritosAbierto(false)}
+        onAlPanel={alPanelDesdeFavoritos}
+        onQuitar={favoritos.quitar}
+        onVaciar={favoritos.vaciar}
       />
     </div>
   );

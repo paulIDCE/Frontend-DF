@@ -1,11 +1,13 @@
-import { archivoEntidad, leerJson } from "@/services/datosService";
-import { parrafos } from "@/modulos/Explorador/datos";
-import type { CuadroCargado, FilaCuadro, TipoCuadro } from "@/modulos/Explorador/tipos";
+import { archivoEntidad } from "@/services/datosService";
+import { apiCuadro, apiEntidades } from "@/services/apiDatos";
+import { aCuadroCargado } from "@/services/adaptadores";
+import type { CuadroCargado, TipoCuadro } from "@/modulos/Explorador/tipos";
 
 /**
  * Carga de cuadros de Sistema Financiero y Tasas — porte de `loadTable`,
  * `loadTableEfi`, `loadBalancesTable(Efi)` y `loadCarteraTable(Efi)` de
- * prueba-data `sistema.js` / `tasas.js`, unificados por `TipoCuadro`.
+ * prueba-data `sistema.js` / `tasas.js`. El filtrado por sector, entidad,
+ * analisis y credito lo hace la API; aqui solo se eligen los parametros.
  */
 
 export const SECTORES = [
@@ -27,15 +29,15 @@ export const ANALISIS = [
   { value: "vertical", label: "Análisis Vertical (%)" },
 ];
 
-/** El `value` es el texto exacto de la columna `ID` en los JSON. */
+/** El `value` es el id de credito de la API (`GET /api/catalogos`). */
 export const CREDITOS = [
-  { value: "Cartera Total", label: "Cartera Total" },
-  { value: "Productivo", label: "Productivo" },
-  { value: "Consumo", label: "Consumo" },
-  { value: "Inmobiliario", label: "Inmobiliario" },
-  { value: "Vivienda interés Público y Social", label: "Vivienda interés Público y Social" },
-  { value: "Educativo", label: "Educativo" },
-  { value: "Microcrédito", label: "Microcrédito" },
+  { value: "total", label: "Cartera Total" },
+  { value: "productivo", label: "Productivo" },
+  { value: "consumo", label: "Consumo" },
+  { value: "inmobiliario", label: "Inmobiliario" },
+  { value: "vip", label: "Vivienda interés Público y Social" },
+  { value: "educativo", label: "Educativo" },
+  { value: "microcredito", label: "Microcrédito" },
 ];
 
 export const ENTIDAD_INICIAL = "BP. AMAZONAS";
@@ -55,97 +57,33 @@ export const controlesDe = (tipo: TipoCuadro) => ({
   credito: tipo.startsWith("cartera"),
 });
 
-const etiqueta = (lista: { value: string; label: string }[], valor: string) =>
-  lista.find((o) => o.value === valor)?.label ?? valor;
+/**
+ * Cuadros ya pedidos en esta sesion (por cuadro + filtros que le aplican): volver a uno es
+ * inmediato. Se guarda la promesa, asi dos pedidos iguales en vuelo comparten la peticion; si
+ * falla, se olvida para poder reintentar.
+ */
+const CACHE_MAX = 40;
+const cache = new Map<string, Promise<CuadroCargado>>();
 
-/** `filtrarPorSector` del original: coincidencia exacta o por contenido. */
-const deSector = (fila: FilaCuadro, sector: string) => {
-  const buscado = etiqueta(SECTORES, sector);
-  const filtro = String(fila.Filtro ?? "");
-  return filtro === buscado || filtro.includes(buscado);
-};
-
-interface Nota {
-  Cuadro: string;
-  Notas: string;
-}
-
-const notasDe = async (id: string) =>
-  (await leerJson<Nota[]>("base_notas.json").catch(() => [] as Nota[]))
-    .filter((n) => n.Cuadro === id)
-    .flatMap((n) => parrafos(n.Notas));
-
-const datosEntidad = (carpeta: "entidades" | "balances", entidad: string) =>
-  leerJson<FilaCuadro[]>(`${carpeta}/${archivoEntidad(entidad)}.json`);
-
-export const cargarCuadroSistema = async (
-  tipo: TipoCuadro,
-  id: string,
-  f: Filtros
-): Promise<CuadroCargado> => {
+export const cargarCuadroSistema = (tipo: TipoCuadro, id: string, f: Filtros): Promise<CuadroCargado> => {
   const c = controlesDe(tipo);
-  let filas: FilaCuadro[];
-
-  switch (tipo) {
-    case "tabla":
-      filas = (await leerJson<FilaCuadro[]>("base_estru_sistema.json")).filter(
-        (r) => r.Cuadro === id && deSector(r, f.sector)
-      );
-      break;
-    case "tablaEfi":
-      filas = (await datosEntidad("entidades", f.entidad)).filter((r) => r.Cuadro === id);
-      break;
-    case "balances":
-      filas = (await leerJson<FilaCuadro[]>("base_balances.json")).filter(
-        (r) => r.Cuadro === id && r.ID === etiqueta(ANALISIS, f.analisis) && deSector(r, f.sector)
-      );
-      break;
-    case "balancesEfi":
-      filas = (await datosEntidad("balances", f.entidad)).filter(
-        (r) => r.Cuadro === id && r.ID === etiqueta(ANALISIS, f.analisis)
-      );
-      break;
-    case "cartera":
-      filas = (await leerJson<FilaCuadro[]>("base_cartera.json")).filter(
-        (r) => r.Cuadro === id && r.ID === f.credito && deSector(r, f.sector)
-      );
-      break;
-    case "carteraEfi":
-      filas = (await datosEntidad("entidades", f.entidad)).filter(
-        (r) => r.Cuadro === id && r.ID === f.credito
-      );
-      break;
-  }
-
-  const partes = [
-    c.sector ? etiqueta(SECTORES, f.sector) : f.entidad,
-    c.analisis ? etiqueta(ANALISIS, f.analisis) : null,
-    c.credito ? f.credito : null,
-  ].filter(Boolean) as string[];
-
-  const esBalance = c.analisis;
-  const unidad = String(filas[0]?.Unidad ?? "");
-
-  return {
-    id,
-    titulo: String(filas[0]?.Titulo_Cuadro ?? ""),
-    unidad: [unidad, ...partes.slice(1), c.entidad ? f.entidad : null].filter(Boolean).join(" - "),
-    filas,
-    notas: esBalance ? [] : await notasDe(id),
-    vista: esBalance ? "arbol" : "grupos",
-    sector: partes.join("|"),
-    sectorNombre: partes.join(" · "),
+  const params = {
+    sector: c.sector ? f.sector : undefined,
+    // La pantalla maneja el nombre ("BP. PICHINCHA"); la API, el id ("BP__PICHINCHA").
+    entidad: c.entidad ? archivoEntidad(f.entidad) : undefined,
+    analisis: c.analisis ? f.analisis : undefined,
+    credito: c.credito ? f.credito : undefined,
   };
-};
+  const clave = JSON.stringify([id, params]);
+  const guardado = cache.get(clave);
+  if (guardado) return guardado;
 
-export interface EntidadLista {
-  id: string;
-  nombre: string;
-  archivo?: string;
-}
+  const promesa = apiCuadro(id, params).then(aCuadroCargado);
+  promesa.catch(() => cache.delete(clave));
+  cache.set(clave, promesa);
+  if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+  return promesa;
+};
 
 export const cargarEntidades = async (): Promise<{ value: string; label: string }[]> =>
-  (await leerJson<EntidadLista[]>("entidades_lista.json"))
-    .map((e) => e.nombre)
-    .sort((a, b) => a.localeCompare(b))
-    .map((n) => ({ value: n, label: n }));
+  (await apiEntidades()).map((e) => ({ value: e.nombre, label: e.nombre }));

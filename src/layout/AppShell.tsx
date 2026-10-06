@@ -1,9 +1,11 @@
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { Button, Spin } from "antd";
 import { LogoutOutlined } from "@ant-design/icons";
 import { useAuth } from "@/auth/AuthContext";
 import { PANTALLAS } from "@/config/app";
+import AvisoOrigenDatos from "./AvisoOrigenDatos";
+import OrigenDatosProvider from "./OrigenDatosProvider";
 
 /**
  * Shell propio de la app (header + contenido + footer).
@@ -20,6 +22,28 @@ const LoadingFallback = () => (
   </div>
 );
 
+/**
+ * Publica el alto del encabezado en la variable CSS `--alto-encabezado` (en `:root`): las barras
+ * fijas de las pantallas (p. ej. la de la revista) se pegan justo debajo. El encabezado crece
+ * cuando el menu se envuelve en pantallas angostas, asi que se mide en vivo.
+ */
+const usePublicarAlto = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const publicar = () => document.documentElement.style.setProperty("--alto-encabezado", `${Math.round(el.getBoundingClientRect().height)}px`);
+    publicar();
+    const observador = new ResizeObserver(publicar);
+    observador.observe(el);
+    return () => {
+      observador.disconnect();
+      document.documentElement.style.removeProperty("--alto-encabezado");
+    };
+  }, []);
+  return ref;
+};
+
 const Header = () => {
   const { username, signOut } = useAuth();
   const navigate = useNavigate();
@@ -30,7 +54,7 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
+    <header className="flex items-center justify-between gap-4 bg-superficie px-8 py-3 shadow-contenedor">
       <div className="flex items-center gap-3">
         <img src="/images/imgdatalux2.png" alt="Data Financiero" className="w-14 h-auto" />
         <div className="flex flex-col">
@@ -64,6 +88,17 @@ const Header = () => {
         </Button>
       </div>
     </header>
+  );
+};
+
+/** Encabezado + aviso de origen de datos: fijos arriba y medidos juntos en `--alto-encabezado`. */
+const BloqueSuperior = () => {
+  const ref = usePublicarAlto();
+  return (
+    <div ref={ref} className="sticky top-0 z-50">
+      <Header />
+      <AvisoOrigenDatos />
+    </div>
   );
 };
 
@@ -116,15 +151,17 @@ const AppShell = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-superficie-hundida">
-      <Header />
-      <main className="flex-1">
-        <Suspense fallback={<LoadingFallback />}>
-          <Outlet />
-        </Suspense>
-      </main>
-      <Footer />
-    </div>
+    <OrigenDatosProvider>
+      <div className="flex min-h-screen flex-col bg-superficie-hundida">
+        <BloqueSuperior />
+        <main className="flex-1">
+          <Suspense fallback={<LoadingFallback />}>
+            <Outlet />
+          </Suspense>
+        </main>
+        <Footer />
+      </div>
+    </OrigenDatosProvider>
   );
 };
 

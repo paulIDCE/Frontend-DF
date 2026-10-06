@@ -23,6 +23,13 @@ export interface HojaExcel<T> {
   filas: T[];
   /** Filas de desglose que se escriben debajo de cada fila (la fila padre va en negrita). */
   hijos?: (fila: T) => T[];
+  /**
+   * Profundidad de la fila en un arbol (0 = raiz). Con ella Excel agrupa las filas (botones +/-) y
+   * las que tienen hijos van en negrita.
+   */
+  nivel?: (fila: T) => number;
+  /** Fila dentro de una rama contraida en pantalla: se escribe oculta (el grupo queda cerrado). */
+  oculta?: (fila: T) => boolean;
 }
 
 const bordeFino: Partial<Borders> = {
@@ -78,6 +85,9 @@ export const exportarExcel = async <T,>(nombreArchivo: string, hojas: HojaExcel<
 
     const escribir = (fila: T, esHijo: boolean, resaltar: boolean) => {
       const row = worksheet.addRow(hoja.columnas.map((c) => c.valor(fila, esHijo) ?? null));
+      const nivel = hoja.nivel?.(fila) ?? 0;
+      if (nivel > 0) row.outlineLevel = Math.min(nivel, 7);
+      if (hoja.oculta?.(fila)) row.hidden = true;
       row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
         cell.border = bordeFino;
         const formato = FORMATOS[hoja.columnas[colNumber - 1]?.formato ?? "texto"];
@@ -89,11 +99,16 @@ export const exportarExcel = async <T,>(nombreArchivo: string, hojas: HojaExcel<
       });
     };
 
-    hoja.filas.forEach((fila) => {
+    hoja.filas.forEach((fila, i) => {
       const hijos = hoja.hijos?.(fila) ?? [];
-      escribir(fila, false, hijos.length > 0);
+      // En un arbol, es padre la fila seguida de una mas profunda.
+      const siguiente = hoja.filas[i + 1];
+      const esPadre = !!hoja.nivel && !!siguiente && hoja.nivel(siguiente) > hoja.nivel(fila);
+      escribir(fila, false, hijos.length > 0 || esPadre);
       hijos.forEach((hijo) => escribir(hijo, true, false));
     });
+    // El +/- de cada grupo va en la fila padre (encima), como en la tabla.
+    if (hoja.nivel) worksheet.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
 
     worksheet.views = [{ state: "frozen", ySplit: 1 }];
   });

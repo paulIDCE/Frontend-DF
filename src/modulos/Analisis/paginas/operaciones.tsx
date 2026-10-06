@@ -1,8 +1,11 @@
-import { TEXTO_GRAFICA, color, inicioZoom, zoomTemporal } from "@idce/kit";
+import { color, FilaKpis, TEXTO_GRAFICA } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
-import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
-import { fechaCorta, fechaLarga, fmt, type Ctx } from "../datos";
-import { opcionHistorico, opcionTresCortes, type SerieHistorica } from "../opciones";
+import { LineChartOutlined } from "@ant-design/icons";
+import { CabeceraPagina, Grafica, KpiBox, MiniKpi, TituloBloque } from "../componentes";
+import { fechaLarga, fmt, pct, type Ctx, zoomRevista } from "../datos";
+import { opcionHistorico, opcionTresCortes, type SerieHistorica, ejeValor } from "../opciones";
+
+const fmt3 = (n: number) => n.toLocaleString("es-EC", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
 /**
  * Hojas 17 (Turbulencia), 18 (Operaciones activas y pasivas) y 19-23
@@ -20,7 +23,8 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
   const validos = turb.filter((v) => v !== 0).sort((a, b) => a - b);
   const p75 = percentil(validos, 0.75);
   const p50 = percentil(validos, 0.5);
-  const tono = (v: number) => (v <= p50 ? color.datos.series[0] : v <= p75 ? color.datos.eje : color.tinta.tenue);
+  // Niveles con los estados del kit, igual que el texto del panel lateral (exito / advertencia / error).
+  const tono = (v: number) => (v <= p50 ? color.exito.base : v <= p75 ? color.advertencia.base : color.error.base);
   const nivel = (v: number) => (v <= p50 ? "Normal" : v <= p75 ? "Turbulencia media" : "Turbulencia alta");
   const linea = (nombre: string, valor: number, c: string) => ({
     name: nombre,
@@ -30,7 +34,7 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
     silent: true,
     color: c,
     lineStyle: { type: "dashed", width: 2 },
-    label: { show: true, position: "insideEndTop", ...TEXTO_GRAFICA, formatter: `${nombre.replace("Percentil ", "P").replace("%", "")}: ${valor.toFixed(2)}` },
+    label: { show: true, position: "insideEndTop", ...TEXTO_GRAFICA, formatter: `${nombre.replace("Percentil ", "P").replace("%", "")}: ${fmt3(valor)}` },
   });
   return {
     tooltip: {
@@ -41,10 +45,10 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
         ps
           .map((p) =>
             p.seriesName === "Índice de Turbulencia"
-              ? `${p.marker}${p.seriesName}: <strong>${p.value.toFixed(3)}</strong> (${nivel(p.value)})`
+              ? `${p.marker}${p.seriesName}: <strong>${fmt3(p.value)}</strong> (${nivel(p.value)})`
               : p.seriesName.startsWith("Percentil")
-                ? `${p.marker}${p.seriesName}: <strong>${p.value.toFixed(3)}</strong>`
-                : `${p.marker}${p.seriesName}: <strong>${p.value.toFixed(2)}%</strong>`
+                ? `${p.marker}${p.seriesName}: <strong>${fmt3(p.value)}</strong>`
+                : `${p.marker}${p.seriesName}: <strong>${pct(p.value)}</strong>`
           )
           .join("<br/>"),
     },
@@ -52,36 +56,29 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
     grid: { left: 8, right: 8, top: 24, bottom: 70, containLabel: true },
     xAxis: { type: "category", data: ctx.fechas.map(fechaLarga), axisLabel: { ...TEXTO_GRAFICA, rotate: 45 }, axisTick: { show: false } },
     yAxis: [
-      { type: "value", name: "Índice", min: "dataMin", max: "dataMax", nameTextStyle: TEXTO_GRAFICA, axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => v.toFixed(1) } },
-      {
-        type: "value",
-        name: "Var. Cartera Bruta Real",
-        min: "dataMin",
-        max: "dataMax",
-        nameTextStyle: TEXTO_GRAFICA,
-        axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => `${v.toFixed(2)}%` },
-        splitLine: { show: false },
-      },
+      { ...ejeValor("numero"), name: "Índice de turbulencia", min: "dataMin", max: "dataMax", axisLabel: { ...TEXTO_GRAFICA, formatter: (v: number) => fmt3(v) } },
+      { ...ejeValor("%"), name: "Variación anual real de la cartera (%)", min: "dataMin", max: "dataMax", splitLine: { show: false } },
     ],
-    dataZoom: zoomTemporal(inicioZoom(ctx.fechas.length, 12)),
+    dataZoom: zoomRevista(ctx, 12),
     series: [
       {
         name: "Índice de Turbulencia",
         type: "bar",
         barMaxWidth: 40,
-        color: color.datos.series[0],
-        data: turb.map((v) => ({ value: v, itemStyle: { color: tono(v) } })),
+        // En la leyenda, gris: el color de cada barra es su nivel (verde / ambar / rojo).
+        color: color.datos.eje,
+        data: turb,
+        itemStyle: { color: (p: { value: number }) => tono(p.value) },
       },
       linea("Percentil 75%", p75, color.tinta.secundaria),
-      linea("Percentil 50%", p50, color.datos.series[0]),
+      linea("Percentil 50%", p50, color.datos.eje),
       {
         name: "Var. Cartera Bruta Real",
         type: "line",
         yAxisIndex: 1,
         data: ctx.serie(varAnual),
-        color: color.datos.series[7],
+        color: color.datos.series[0],
         symbolSize: 4,
-        areaStyle: { opacity: 0.1 },
       },
     ],
   };
@@ -110,15 +107,11 @@ export const Hoja17 = () => {
   return (
     <>
       <CabeceraPagina titulo="ÍNDICE DE TURBULENCIA" />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={5} className="mb-3">
         {kpis.map(([code, t]) => (
-          <div key={code} className="flex min-w-40 flex-1 flex-col rounded-tarjeta border-l-4 border-identidad bg-superficie p-3 shadow-tarjeta">
-            <span className="text-rotulo font-bold text-tinta-secundaria">{t}</span>
-            <span className="text-cifra font-extrabold text-identidad">{ctx.valor(code).toFixed(2)}%</span>
-            <span className="text-detalle text-tinta-tenue">{fechaCorta(ctx.fecha)}</span>
-          </div>
+          <KpiBox key={code} titulo={t} code={code} />
         ))}
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {[
@@ -130,16 +123,16 @@ export const Hoja17 = () => {
             <Grafica key={code} titulo={titulo} option={opcionTurbulencia(ctx, code)} alto={320} cambioTipo={false} />
           ))}
         </div>
-        <section className="rounded-tarjeta border border-linea bg-superficie-sutil p-3 text-detalle">
-          <h4 className="m-0 mb-3 text-subtitulo font-bold text-identidad">ANÁLISIS DEL ÍNDICE DE TURBULENCIA</h4>
-          <strong className="text-identidad">Resumen Actual:</strong>
+        <section className="rounded-tarjeta border border-linea bg-superficie p-3 text-detalle">
+          <TituloBloque icono={<LineChartOutlined />}>Análisis del índice de turbulencia</TituloBloque>
+          <strong className="text-tinta">Resumen actual</strong>
           <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
             {RESUMEN.map(([t, v]) => {
               const val = ctx.valor(v);
               const [cls, txt] = nivel(val);
               return (
-                <li key={t} className="rounded-tarjeta border-l-4 border-accion bg-superficie p-2">
-                  <strong>{t}:</strong> {val.toFixed(3)} - <span className={`font-semibold ${cls}`}>{txt}</span>
+                <li key={t} className="rounded-tarjeta border-l-4 border-accion-borde bg-accion-sutil p-2">
+                  <strong>{t}:</strong> {fmt3(val)} · <span className={`font-semibold ${cls}`}>{txt}</span>
                 </li>
               );
             })}
@@ -147,7 +140,7 @@ export const Hoja17 = () => {
           <div className="mt-3 rounded-tarjeta border-l-4 border-advertencia bg-advertencia-sutil p-2">
             <strong>Interpretación:</strong>
             <p className="m-0 mt-1">
-              Los valores por encima del percentil 75% ({p75.toFixed(2)}) indican{" "}
+              Los valores por encima del percentil 75 ({fmt3(p75)}) indican{" "}
               <span className="font-semibold text-error">turbulencia alta</span>, lo que sugiere variaciones anómalas en
               la cartera de crédito que requieren atención especial.
             </p>
@@ -166,14 +159,14 @@ export const Hoja18 = () => {
   return (
     <>
       <CabeceraPagina titulo="MONTO DE OPERACIONES ACTIVAS Y PASIVAS" subtitulo="Operaciones de Crédito y Depósitos a Plazo Nuevos" />
-      <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-6">
+      <FilaKpis columnas={3} className="mb-3">
         <KpiBox titulo="MONTO OPER. ACTIVAS (MILLONES USD)" code="monto_total" />
         <KpiBox titulo="NÚMERO OPER. ACTIVAS (#)" code="ope_total" />
         <KpiBox titulo="MONTO PROMEDIO ACTIVAS (USD)" code="monto_pro" />
         <KpiBox titulo="MONTO OPER. PASIVAS (MILLONES USD)" code="mop" />
         <KpiBox titulo="NÚMERO OPER. PASIVAS (#)" code="OPTPE" />
         <KpiBox titulo="MONTO PROMEDIO PASIVAS (USD)" code="pro_MOP" />
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -243,16 +236,16 @@ export const Hoja18 = () => {
             />
           </div>
         </div>
-        <section className="rounded-tarjeta border border-linea bg-superficie-sutil p-3 text-detalle">
-          <h4 className="m-0 mb-3 text-subtitulo font-bold text-identidad">ANÁLISIS DE CRÉDITO Y DEPÓSITOS</h4>
-          <strong className="text-identidad">Resumen de Operaciones:</strong>
+        <section className="rounded-tarjeta border border-linea bg-superficie p-3 text-detalle">
+          <TituloBloque icono={<LineChartOutlined />}>Análisis de crédito y depósitos</TituloBloque>
+          <strong className="text-tinta">Resumen de operaciones</strong>
           <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
-              ["OPERACIONES ACTIVAS", "monto_total", "ope_total", "monto_pro", "border-accion"],
-              ["OPERACIONES PASIVAS", "mop", "OPTPE", "pro_MOP", "border-exito"],
-            ].map(([t, m, n, p, borde]) => (
-              <div key={t} className={`rounded-tarjeta border-l-4 bg-superficie p-2 ${borde}`}>
-                <strong className="text-identidad">{t}</strong>
+              ["Operaciones activas", "monto_total", "ope_total", "monto_pro"],
+              ["Operaciones pasivas", "mop", "OPTPE", "pro_MOP"],
+            ].map(([t, m, n, p]) => (
+              <div key={t} className="rounded-tarjeta border-l-4 border-accion-borde bg-accion-sutil p-2">
+                <strong className="text-tinta">{t}</strong>
                 <p className="m-0">
                   Monto Total: <strong>{fmt(v(m))} millones USD</strong>
                 </p>
@@ -268,9 +261,8 @@ export const Hoja18 = () => {
           <div className="mt-3 rounded-tarjeta border-l-4 border-advertencia bg-advertencia-sutil p-2">
             <strong>Composición del Crédito:</strong>
             <p className="m-0 mt-1">
-              Corporativo: <strong>{v("part_proc").toFixed(2)}%</strong> | Empresarial:{" "}
-              <strong>{v("part_empr").toFixed(2)}%</strong> | PYMES: <strong>{v("part_pyme").toFixed(2)}%</strong> |
-              Consumo: <strong>{v("partmon_cons").toFixed(2)}%</strong>
+              Corporativo: <strong>{pct(v("part_proc"))}</strong> · Empresarial: <strong>{pct(v("part_empr"))}</strong> ·
+              PYMES: <strong>{pct(v("part_pyme"))}</strong> · Consumo: <strong>{pct(v("partmon_cons"))}</strong>
             </p>
           </div>
         </section>
@@ -297,11 +289,11 @@ const PaginaSegmento = ({ c }: { c: ConfigSegmento }) => {
   return (
     <>
       <CabeceraPagina titulo={c.titulo} subtitulo={c.subtitulo} />
-      <div className="mb-3 flex flex-wrap gap-3">
+      <FilaKpis columnas={c.kpis.length > 4 ? 5 : 4} className="mb-3">
         {c.kpis.map(([code, t]) => (
           <KpiBox key={code} titulo={t} code={code} />
         ))}
-      </div>
+      </FilaKpis>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-3">
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -327,7 +319,7 @@ const PaginaSegmento = ({ c }: { c: ConfigSegmento }) => {
         </div>
         <div className="grid grid-cols-1 content-start gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
           {c.minis.map(([code, t], i) => (
-            <MiniKpi key={code} titulo={t} code={code} tipo={i % 2 ? "line" : "bar"} indiceColor={i} sufijo="" />
+            <MiniKpi key={code} titulo={t} code={code} tipo={i % 2 ? "line" : "bar"} sufijo="" />
           ))}
         </div>
       </div>

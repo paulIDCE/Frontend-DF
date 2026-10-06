@@ -28,6 +28,7 @@ const Login = lazy(() => import("@/modulos/Auth/Login"));
 const Dashboard = lazy(() => import("@/modulos/Inicio/Dashboard"));
 const Macroeconomico = lazy(() => import("@/modulos/Macro/Macroeconomico"));
 const SistemaFinanciero = lazy(() => import("@/modulos/Sistema/SistemaFinanciero"));
+const MonitorSistema = lazy(() => import("@/modulos/Sistema/MonitorSistema"));
 const TasasInteres = lazy(() => import("@/modulos/Tasas/TasasInteres"));
 const Analisis = lazy(() => import("@/modulos/Analisis/Analisis"));
 
@@ -62,6 +63,7 @@ const AppRoutes = () => (
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/macro" element={<Macroeconomico />} />
         <Route path="/sistema" element={<SistemaFinanciero />} />
+        <Route path="/monitor" element={<MonitorSistema />} />
         <Route path="/tasas" element={<TasasInteres />} />
         <Route path="/analisis" element={<Analisis />} />
       </Route>

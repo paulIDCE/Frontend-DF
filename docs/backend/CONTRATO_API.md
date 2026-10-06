@@ -493,6 +493,10 @@ Reemplaza el "Datos actualizados" falso del hub, que hoy muestra la hora actual.
 - `Healthy` si los archivos base están cargados y el índice de reportes está listo.
 - `Degraded` mientras el índice se construye.
 - `Unhealthy` si falta `RutaBase`.
+- Respuesta: `{ "status": "Healthy", "detalle": "..." }`.
+- Con `Datos:Sql:Habilitado = true` también pasa a `Degraded` si SQL cae: mientras tanto todos los endpoints responden solo con JSON (BackendDF, 05/10/2026). El front lo usa en la banda de origen de datos (`src/layout/AvisoOrigenDatos.tsx`).
+
+**Origen SQL / JSON por endpoint (05/10/2026).** Ningún endpoint es 100 % SQL: el orden de las filas, los títulos y el catálogo de entidades salen del JSON. De SQL salen los saldos de las cuentas @NNNN y los 5 indicadores de solvencia de EFI05. Son *mixtos* EFI01/SFN01, EFI02/SFN02, EFI05, EFI06/SFN06 (solo con el análisis "saldo"), EFI07, EFI10, `/entidades/{id}/reporte`, `/entidades/series`, `/rankings` y `/sistema/series`. El resto (macro BCE, anualizados, fuentes y usos, indicadores, CAMELS, PERLAS, cartera, tasas, SFN05/07/08) sale del JSON. Las fechas ya son las de la ventana de la BD, salvo EFI09, TPE02 y CAR03, que no salen del .sav. Mapa en el front: `origenCuadro` (`src/layout/origenDatos.ts`).
 
 ---
 
@@ -533,7 +537,7 @@ Valores medidos sobre los datos actuales, con la misma lógica que hoy usa el fr
 | # | Petición | Resultado esperado |
 |---|---|---|
 | 1 | `GET /api/cuadros/IEA111A` | 13 filas, 26 períodos (2000-12 … 2025-12), `titulo` "OFERTA MONETARIA (M1) Y LIQUIDEZ TOTAL (M2)"; la fila 0 es "Especies Monetarias en Circulación (1)" con valor 2025-12 = 21549.2 (redondeado). |
-| 2 | `GET /api/cuadros/SFN01?sector=nacional` | 212 filas, 70 períodos (2021-05 … 2027-02). |
+| 2 | `GET /api/cuadros/SFN01?sector=nacional` | 212 filas, 69 períodos (2021-05 … 2027-01). Solo TPE01 llega a 2027-02. |
 | 3 | `GET /api/cuadros/SFN06?sector=nacional&analisis=saldo` | 1.517 filas, `vista: "arbol"`; 7 filas de nivel 1 con `padre: null` (ACTIVO … CUENTAS DE ORDEN); la fila "11.    FONDOS DISPONIBLES" tiene como `padre` a "1.    ACTIVO". |
 | 4 | `GET /api/cuadros/CAR01?sector=nacional&credito=total` | 42 filas. |
 | 5 | `GET /api/cuadros/TEA01?sector=seg1&credito=productivo` | 21 filas, `unidad` "Porcentajes". |

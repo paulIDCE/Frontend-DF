@@ -118,6 +118,9 @@
   --color-pdf: #dc2626;
   --color-pdf-hover: #b91c1c;
   --color-pdf-activo: #991b1b;
+  --color-word: #1e40af;
+  --color-word-hover: #1e3a8a;
+  --color-word-activo: #172554;
 
   /* Datos */
   --color-serie-1: #2a78d6;

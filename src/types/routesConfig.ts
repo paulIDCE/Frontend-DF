@@ -24,6 +24,11 @@ export interface RoutesConfig {
   SUPABASE_URL?: string;
   /** Publishable key de Supabase (publica por diseño, no es un secreto). */
   SUPABASE_ANON_KEY?: string;
+  /**
+   * Webhook del agente de informes (Kipu), workflow n8n "Informes (determinista, multi-tipo)".
+   * Sin este campo el boton de Kipu se muestra deshabilitado.
+   */
+  VITE_AGENTE_INFORMES_URL?: string;
 }
 
 /** Funcion que cada servicio expone para recibir las bases por inyeccion. */

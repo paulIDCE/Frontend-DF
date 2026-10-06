@@ -4,5 +4,6 @@
   "VITE_API_SSO_URL": "http://localhost:81/api",
   "VITE_BASE_SSO_URL": "http://localhost:81/",
   "SUPABASE_URL": "https://mxpseuoksbrqsecukqou.supabase.co",
-  "SUPABASE_ANON_KEY": "sb_publishable_mGMXUplvTP0wCbGa7av4jg_Z01-xPaX"
+  "SUPABASE_ANON_KEY": "sb_publishable_mGMXUplvTP0wCbGa7av4jg_Z01-xPaX",
+  "VITE_AGENTE_INFORMES_URL": "http://localhost:5678/webhook/informes"
 }

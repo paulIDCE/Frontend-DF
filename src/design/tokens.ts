@@ -218,11 +218,13 @@ export const color = {
 
   /**
    * Botones de descarga: el color identifica el FORMATO del archivo, no un estado (por eso no
-   * son `exito` / `error`). Excel verde oscuro, PDF rojo vivo: se distinguen del éxito (ΔE 8.4) y
-   * del error (ΔE 14.4), y siempre llevan su icono y la palabra "Excel" / "PDF". AA en los tres estados.
+   * son `exito` / `error`). Excel verde oscuro, PDF rojo vivo, Word azul oscuro: se distinguen del
+   * éxito (ΔE 8.4) y del error (ΔE 14.4), y siempre llevan su icono y la palabra "Excel" / "PDF" /
+   * "Word" (el azul de Word es el `activo` de la acción: lo separan el icono y el texto). AA en los tres estados.
    */
   excel: { base: p.verde[800], hover: p.verde[900], activo: p.verde[950] }, // 7.1 / 9.1 / 14.9
   pdf: { base: p.rojo[600], hover: p.rojo[700], activo: p.rojo[800] }, // 4.8 / 6.5 / 8.3
+  word: { base: p.azul[800], hover: p.azul[900], activo: p.azul[950] }, // 8.7 / 10.4 / 15.9
 
   /**
    * Visualización de datos. Paleta categórica validada (orden fijo = seguridad para daltonismo;

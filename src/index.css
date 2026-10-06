@@ -86,3 +86,51 @@
     break-inside: avoid;
   }
 }
+
+/* Kipu (asistente de informes, `modulos/Analisis/kipu`): parpadea y mueve su khipu mientras trabaja. */
+@keyframes kipu-parpadeo {
+  0%, 90%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+
+@keyframes kipu-vaiven {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+
+.kipu-pensando .kipu-ojos {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: kipu-parpadeo 2.4s infinite;
+}
+
+.kipu-pensando .kipu-cordeles {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: kipu-vaiven 1.2s ease-in-out infinite;
+}
+
+.kipu-boton:hover .kipu-cordeles {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: kipu-vaiven 1.2s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kipu-pensando .kipu-ojos,
+  .kipu-pensando .kipu-cordeles,
+  .kipu-boton:hover .kipu-cordeles {
+    animation: none;
+  }
+}
+
+.kipu-informe .ant-table-tbody > tr.kipu-fila-entidad > td {
+  background: var(--color-accion-sutil);
+  font-weight: 600;
+}
+
+.kipu-informe .ant-table-tbody > tr.kipu-fila-mediana > td {
+  background: var(--color-superficie-sutil);
+  font-style: italic;
+}
+

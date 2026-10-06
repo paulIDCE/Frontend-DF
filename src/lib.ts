@@ -21,7 +21,7 @@ export { default as ActionButtons } from "./components/ActionButtons";
 export { default as BreadcrumbNav } from "./components/BreadcrumbNav";
 export { ConfirmDialog, SimpleAlert } from "./components/ConfirmDialog";
 export { default as CrudTable } from "./components/CrudTable";
-export { ExcelButton, PdfButton } from "./components/DownloadButtons";
+export { ExcelButton, PdfButton, WordButton } from "./components/DownloadButtons";
 export type { DownloadButtonProps } from "./components/DownloadButtons";
 export { default as EmptyState } from "./components/EmptyState";
 export { default as ErrorBoundary } from "./components/ErrorBoundary";

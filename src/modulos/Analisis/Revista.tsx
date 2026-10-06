@@ -17,6 +17,7 @@ import { RevistaContext, type RevistaValor } from "./RevistaContext";
 import { MESES, crearCtx, fechasDe } from "./datos";
 import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
 import { HOJAS_ORDENADAS, SECCIONES, hojaPorNumero, seccionDe } from "./paginas";
+import Kipu from "./kipu/Kipu";
 
 /**
  * Revista digital de 31 hojas — porte de `#digital-magazine-view` de
@@ -295,6 +296,18 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
               </div>,
               document.body
             )}
+          {/* Asistente de informes: usa la entidad y el corte que el usuario tiene a la vista. */}
+          <Kipu
+            entidad={entidad}
+            archivo={lista?.find((e) => e.nombre === entidad)?.archivo}
+            corte={fecha}
+            ultimoCorte={fechas[fechas.length - 1] ?? fecha}
+            hoja={pagina}
+            onIrAHoja={onPagina}
+            tamano={valor.tamano}
+            rango={valor.rango}
+            provincia={valor.provincia}
+          />
         </RevistaContext.Provider>
       )}
     </div>

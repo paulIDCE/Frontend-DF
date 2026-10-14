@@ -52,8 +52,6 @@ const ExploradorSistema = ({ arbol, cuadroInicial, creditos = CREDITOS.map((c) =
   const tipo = nodo?.tipo ?? "tabla";
   const id = nodo?.cuadro ?? cuadroInicial;
   const visibles = controlesDe(tipo);
-  useReportarOrigen(origenCuadro(id, filtros.analisis));
-
   const { data, isLoading, apiError, execute } = useService(
     cargarCuadroSistema,
     [tipo, id, filtros],
@@ -61,6 +59,8 @@ const ExploradorSistema = ({ arbol, cuadroInicial, creditos = CREDITOS.map((c) =
     true,
     "No se pudieron cargar los datos del cuadro"
   );
+  // La fuente real la da la API en cada respuesta; la tabla fija de `origenCuadro`, solo con un backend anterior.
+  useReportarOrigen((data?.id === id ? data.fuenteDatos : null) ?? origenCuadro(id, filtros.analisis));
   const { data: entidades } = useService(cargarEntidades, [], [], true, "No se pudo cargar la lista de entidades");
 
   const controles = (

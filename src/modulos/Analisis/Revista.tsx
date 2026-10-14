@@ -18,6 +18,10 @@ import { MESES, crearCtx, fechasDe } from "./datos";
 import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
 import { HOJAS_ORDENADAS, SECCIONES, hojaPorNumero, seccionDe } from "./paginas";
 import Kipu from "./kipu/Kipu";
+import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
+import { conteoDeFilas, detalleFuente, fuenteDeFilas } from "@/services/fuenteDatos";
+import { FuentesHoja } from "./FuentesHoja";
+import { useReportarOrigen } from "@/layout/origenDatos";
 
 /**
  * Revista digital de 31 hojas — porte de `#digital-magazine-view` de
@@ -67,6 +71,13 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
   const { data: lista } = useService(cargarListaEntidades, [], [], true, "No se pudo cargar la lista de entidades");
 
   const fechas = useMemo(() => (filas ? fechasDe(filas) : []), [filas]);
+  // Fuente del reporte REP01 (los derivados del front no traen `_fuente` y no cuentan).
+  const { fuente, conteo } = useMemo(
+    () => (filas ? { fuente: fuenteDeFilas(filas), conteo: conteoDeFilas(filas.filter((f) => "_fuente" in f)) } : { fuente: null, conteo: undefined }),
+    [filas]
+  );
+  // Banda de origen (`AvisoOrigenDatos`): la del REP01 cuando la API la informa.
+  useReportarOrigen(fuente ?? "mixto");
   const anios = useMemo(() => [...new Set(fechas.map((f) => f.slice(0, 4)))].sort().reverse(), [fechas]);
   const [eleccion, setEleccion] = useState<{ base: string[]; fecha: string } | null>(null);
   const fecha = eleccion && eleccion.base === fechas ? eleccion.fecha : (fechas[fechas.length - 1] ?? "");
@@ -211,6 +222,19 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
                 </span>
               </span>
             )}
+            <InsigniaFuente
+              fuente={fuente}
+              filasPorFuente={conteo}
+              detalle={
+                valor
+                  ? () => <FuentesHoja ctx={valor.ctx} resumen={
+                        conteo
+                          ? `Reporte completo de la entidad: ${conteo.bd} cuentas de la base de datos y ${conteo.json} de archivos JSON.`
+                          : detalleFuente(fuente ?? "mixto")
+                      } />
+                  : undefined
+              }
+            />
           </div>
         </div>
         <nav aria-label="Hojas de la revista" className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-linea pt-2">

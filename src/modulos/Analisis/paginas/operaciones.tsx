@@ -3,7 +3,8 @@ import { useRevista } from "../RevistaContext";
 import { LineChartOutlined } from "@ant-design/icons";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi, TituloBloque } from "../componentes";
 import { fechaLarga, fmt, pct, type Ctx, zoomRevista } from "../datos";
-import { opcionHistorico, opcionTresCortes, type SerieHistorica, ejeValor } from "../opciones";
+import { conCodigos, opcionHistorico, opcionTresCortes, type SerieHistorica, ejeValor } from "../opciones";
+import { MarcaCodigo } from "../FuentesHoja";
 
 const fmt3 = (n: number) => n.toLocaleString("es-EC", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
@@ -36,7 +37,7 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
     lineStyle: { type: "dashed", width: 2 },
     label: { show: true, position: "insideEndTop", ...TEXTO_GRAFICA, formatter: `${nombre.replace("Percentil ", "P").replace("%", "")}: ${fmt3(valor)}` },
   });
-  return {
+  return conCodigos({
     tooltip: {
       trigger: "axis",
       confine: true,
@@ -81,7 +82,7 @@ const opcionTurbulencia = (ctx: Ctx, varAnual: string) => {
         symbolSize: 4,
       },
     ],
-  };
+  }, ["turbulencia", varAnual]);
 };
 
 export const Hoja17 = () => {
@@ -132,7 +133,8 @@ export const Hoja17 = () => {
               const [cls, txt] = nivel(val);
               return (
                 <li key={t} className="rounded-tarjeta border-l-4 border-accion-borde bg-accion-sutil p-2">
-                  <strong>{t}:</strong> {fmt3(val)} · <span className={`font-semibold ${cls}`}>{txt}</span>
+                  <strong>{t}:</strong> {fmt3(val)} · <span className={`font-semibold ${cls}`}>{txt}</span>{" "}
+                  <MarcaCodigo ctx={ctx} code={v} />
                 </li>
               );
             })}

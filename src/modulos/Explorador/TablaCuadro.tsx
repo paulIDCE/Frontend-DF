@@ -12,6 +12,9 @@ import { EmptyState, TablaAnalitica, arbolPorNivel, type ColumnaExcel, type Nodo
 import type { FilaCuadro } from "./tipos";
 import { etiquetaPeriodo, fmtValor, nivelFila, numero } from "./datos";
 import { columnasAcciones, type PropsTablaSeries } from "./accionesTabla";
+import { CeldaSinHistoria, MarcaFuenteFila } from "./FuenteDatos";
+import { SIGLA_FUENTE, vacioSinHistoria } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Tabla del cuadro — porte de `renderTable` de prueba-data: arbol segun el nivel (expandir /
@@ -60,7 +63,7 @@ const claseNivel = (nivel: number): string =>
 /** Fondo de la fila de grupo en linea: una utilidad de Tailwind pierde contra la capa de antd. */
 const FONDO_GRUPO = { background: "var(--color-superficie-hundida)" };
 
-const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: PropsTablaSeries) => {
+const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, fuenteCuadro, ...acciones }: PropsTablaSeries) => {
   const { datos, gruposFijos } = useMemo(() => {
     const grupos = new Map<string, FilaTabla[]>();
     filas.forEach((fila, indice) => {
@@ -107,6 +110,7 @@ const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: 
           <span className={`inline-flex items-center gap-2 ${claseNivel(r.nivel)}`}>
             {ICONO_NIVEL[r.nivel] ?? <MinusOutlined className="text-tinta-deshabilitada" />}
             <span>{r.fila.Variable}</span>
+            {fuenteCuadro && <MarcaFuenteFila fuente={r.fila._fuente} alPasar={fuenteCuadro !== "mixto"} />}
             {r.seccion && <span className="text-rotulo font-normal not-italic text-tinta-tenue">· {r.seccion}</span>}
           </span>
         ),
@@ -118,7 +122,12 @@ const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: 
       align: "right" as const,
       onCell: soloDatos,
       render: (_: unknown, r: FilaTabla) =>
-        r.tipo === "dato" && <span className={claseNivel(r.nivel)}>{fmtValor(r.fila[p])}</span>,
+        r.tipo === "dato" &&
+        (vacioSinHistoria(r.fila, p, r.fila[p]) ? (
+          <CeldaSinHistoria />
+        ) : (
+          <span className={claseNivel(r.nivel)}>{fmtValor(r.fila[p])}</span>
+        )),
     })),
   ];
 
@@ -129,6 +138,9 @@ const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: 
       valor: (r) => (r.tipo === "dato" ? numero(r.fila[p]) : null),
       ancho: 12,
     })),
+    ...(fuenteCuadro && MODO_DESARROLLO
+      ? [{ titulo: "Fuente", valor: (r: FilaTabla) => (r.tipo === "dato" && r.fila._fuente ? SIGLA_FUENTE[r.fila._fuente] : ""), ancho: 8 }]
+      : []),
   ];
 
   if (periodos.length === 0) {

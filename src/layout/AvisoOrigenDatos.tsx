@@ -4,11 +4,12 @@ import { CheckCircleFilled, CloseOutlined, ExclamationCircleFilled, WarningFille
 import { PANTALLAS, type OrigenDatos } from "@/config/app";
 import { apiSalud } from "@/services/apiDatos";
 import { useOrigenReportado } from "./origenDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Banda entre el encabezado y el contenido que avisa de donde salen los datos de la pantalla
- * (al estilo del aviso de licencia de DevExtreme). Solo en el build desplegado; en desarrollo se
- * fuerza con `VITE_AVISO_ORIGEN_DATOS=true`.
+ * (al estilo del aviso de licencia de DevExtreme). Solo con la bandera de desarrollo
+ * (`VITE_DEVELOPMENT=true`, `src/config/desarrollo.ts`).
  *
  * El origen es el que reporta la pantalla (`useReportarOrigen`) o, si no reporta, el de
  * `PANTALLAS`. Si `/api/health` no esta `Healthy` (SQL caido), todo es JSON.
@@ -16,7 +17,7 @@ import { useOrigenReportado } from "./origenDatos";
  * Se puede cerrar, pero vuelve al cambiar de pantalla o recargar.
  */
 
-const ACTIVO = import.meta.env.PROD || import.meta.env.VITE_AVISO_ORIGEN_DATOS === "true";
+const ACTIVO = MODO_DESARROLLO;
 
 type Aviso = OrigenDatos | "sinSql";
 
@@ -32,7 +33,7 @@ const ESTILO: Record<Aviso, { clase: string; icono: React.ReactNode; titulo: str
     icono: <WarningFilled />,
     titulo: "Datos mixtos",
     texto:
-      "Los saldos contables vienen de la base de datos; los indicadores, fórmulas, títulos y el orden de las filas, de archivos JSON.",
+      "Una parte de los valores viene de la base de datos y otra de archivos JSON; en las tablas cada fila indica su fuente (BD / JSON).",
   },
   json: {
     clase: "bg-error",

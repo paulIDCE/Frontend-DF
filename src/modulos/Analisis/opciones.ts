@@ -71,6 +71,19 @@ const PUNTERO_BARRA = { type: ["sha", "dow"].join("") };
 
 const tooltipEje = { trigger: "axis", confine: true };
 
+/**
+ * Codigos del reporte que pinta una opcion (`_codigos`, ECharts lo ignora): con ellos `Grafica`
+ * marca de que fuente (BD / JSON / calculado) salen sus series sin que la hoja los repita.
+ */
+export const conCodigos = <T extends object>(option: T, codigos: string[]): T & { _codigos: string[] } => ({ ...option, _codigos: codigos });
+
+/** Codigos de `conCodigos` y la opcion sin ellos. */
+export const separarCodigos = (option: unknown): { codigos?: string[]; option: unknown } => {
+  if (!option || typeof option !== "object" || !("_codigos" in option)) return { option };
+  const { _codigos, ...resto } = option as { _codigos: string[] };
+  return { codigos: _codigos, option: resto };
+};
+
 /** Barras "Año Actual" vs "Año Anterior" por mes (hoja 1, PyG, morosidad). */
 export const opcionComparativoAnual = (
   ctx: Ctx,
@@ -80,7 +93,7 @@ export const opcionComparativoAnual = (
 ) => {
   const m = mesesDeAnios(ctx);
   const u = unidadDe(eje);
-  return {
+  return conCodigos({
     tooltip: { ...tooltipEje, axisPointer: PUNTERO_BARRA },
     legend: { bottom: 0, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: 16, bottom: 36, top: 36, containLabel: true },
@@ -90,7 +103,7 @@ export const opcionComparativoAnual = (
       { name: "Año actual", type: tipo, data: ctx.serie(code, m.actual), color: COLOR_ACTUAL, label: etiqueta(etiquetas, u), tooltip: tooltipSerie(u) },
       { name: "Año anterior", type: tipo, data: ctx.serie(code, m.anterior), color: COLOR_ANTERIOR, label: etiqueta(etiquetas, u), tooltip: tooltipSerie(u) },
     ],
-  };
+  }, [code]);
 };
 
 /**
@@ -109,7 +122,7 @@ export const opcionTresCortes = (
     { f: ctx.mesAnterior, c: COLOR_MES_ANTERIOR },
     { f: ctx.fecha, c: COLOR_ACTUAL },
   ];
-  return {
+  return conCodigos({
     tooltip: { ...tooltipEje, axisPointer: PUNTERO_BARRA },
     legend: { bottom: 0, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: 16, bottom: 36, top: 36, containLabel: true },
@@ -129,7 +142,7 @@ export const opcionTresCortes = (
       label: etiqueta(etiquetas, u),
       tooltip: tooltipSerie(u),
     })),
-  };
+  }, cuentas.map((c) => c.code));
 };
 
 export interface SerieHistorica {
@@ -157,7 +170,7 @@ export const opcionHistorico = (
     const limpio = s.name.replace(/\s*\((izq|der)\)\s*$/i, "");
     return marcarDerecha && s.yAxisIndex === 1 ? `${limpio} (eje der.)` : limpio;
   };
-  return {
+  return conCodigos({
     tooltip: { ...tooltipEje, axisPointer: barras ? PUNTERO_BARRA : { type: "cross" } },
     legend: { type: "scroll", bottom: 26, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: hayDerecha ? 16 : 16, bottom: 70, top: 36, containLabel: true },
@@ -188,7 +201,7 @@ export const opcionHistorico = (
         label: etiqueta(etiquetas, u, { rotate: barras > 5 ? 90 : 0 }),
       };
     }),
-  };
+  }, series.map((s) => s.code));
 };
 
 /** Mini grafico de los ultimos 6 meses (mini KPIs). */

@@ -92,6 +92,11 @@ export interface Ctx {
   valor: (code: string, fecha?: string) => number;
   serie: (code: string, fechas?: string[]) => number[];
   dato: (code: string) => Dato | null;
+  /**
+   * Codigos que leyo la hoja (KPIs, graficas, tablas), en mayusculas. Se llena al pintar: sirve para
+   * decir de que fuente (BD / JSON / calculado) sale cada dato de la hoja.
+   */
+  usados: Set<string>;
 }
 
 export const fechasDe = (filas: FilaReporte[]): string[] =>
@@ -107,13 +112,20 @@ export const crearCtx = (filas: FilaReporte[], fecha: string): Ctx => {
       if (!indice.has(clave)) indice.set(clave, f);
     }
   });
-  const fila = (code: string) => indice.get(code.toUpperCase());
+  const usados = new Set<string>();
+  const fila = (code: string) => {
+    const clave = code.toUpperCase();
+    const f = indice.get(clave);
+    if (f) usados.add(clave);
+    return f;
+  };
   const valor = (code: string, f = fecha) => num(fila(code)?.[f]);
   const fechas = fechasDe(filas);
   const mesAnterior = restarMeses(fecha, 1);
   const anioAnterior = restarMeses(fecha, 12);
 
   return {
+    usados,
     filas,
     fecha,
     mesAnterior,

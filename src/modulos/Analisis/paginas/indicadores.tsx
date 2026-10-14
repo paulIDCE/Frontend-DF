@@ -19,7 +19,8 @@ import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { unidadDeEje, type UnidadCelda, fmtUnidad } from "../unidades";
 import { crearCtx, fechaCorta, fechaLarga, fmt, type Ctx, type FilaReporte, zoomRevista, pct, dec } from "../datos";
-import { colorSerie, opcionHistorico, ejeValor, tooltipSerie } from "../opciones";
+import { colorSerie, conCodigos, opcionHistorico, ejeValor, tooltipSerie } from "../opciones";
+import { MarcaCodigo } from "../FuentesHoja";
 import { cargarListaEntidades, cargarReporte } from "../resumenEntidades";
 import type { CategoriaIndicadores, GraficoIndicador } from "./tiposIndicadores";
 import { INDICADORES_27, INDICADORES_29, INDICADORES_30, INDICADORES_31 } from "./indicadoresConfig";
@@ -74,7 +75,7 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
           },
         ]
       : [];
-  return {
+  return conCodigos({
     tooltip: {
       trigger: "axis",
       confine: true,
@@ -93,7 +94,7 @@ const opcionVolatilidad = (ctx: Ctx, g: GraficoIndicador, etiquetas: boolean) =>
       ...linea(principal, color.datos.series[0], "solid"),
       ...linea(secundaria, color.datos.series[1], "dashed"),
     ],
-  };
+  }, g.series.map((s) => s.code));
 };
 
 interface ExtraSeries {
@@ -379,7 +380,16 @@ const TablaIndicadores = ({ filas, nombre }: { filas: Indicador[]; nombre: strin
       excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content", y: 460 }}
       columns={[
-        { title: "Indicador", fixed: "left", render: (_, r) => <span className={r.nivel === 1 ? "font-semibold text-tinta" : "text-tinta"}>{legible(r.nombre)}</span> },
+        {
+          title: "Indicador",
+          fixed: "left",
+          render: (_, r) => (
+            <span className={`inline-flex items-center gap-1.5 ${r.nivel === 1 ? "font-semibold text-tinta" : "text-tinta"}`}>
+              {legible(r.nombre)}
+              <MarcaCodigo ctx={ctx} code={r.code} />
+            </span>
+          ),
+        },
         { title: "Meta", render: (_, r) => <span className="text-detalle text-tinta-secundaria">{r.meta}</span> },
         { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.anioAnterior)} unidad="%" /> },
         { title: fechaCorta(ctx.mesAnterior), align: "right", render: (_, r) => <CeldaNumero valor={ctx.valor(r.code, ctx.mesAnterior)} unidad="%" /> },
@@ -412,7 +422,10 @@ const Calificaciones = ({ code, titulo, subtitulo, puntaje }: { code: string; ti
   ];
   return (
     <section className="rounded-tarjeta border border-linea bg-superficie p-3">
-      <h3 className="m-0 text-subtitulo font-semibold text-tinta">{legible(titulo)}</h3>
+      <h3 className="m-0 flex items-center gap-1.5 text-subtitulo font-semibold text-tinta">
+        {legible(titulo)}
+        <MarcaCodigo ctx={ctx} code={code} />
+      </h3>
       <p className="m-0 mb-3 text-detalle text-tinta-tenue">{subtitulo}</p>
       <div className="flex justify-around gap-2">
         {cortes.map(([f, rot]) => {
@@ -544,15 +557,19 @@ const TablaComparativa = ({ cat, adicionales }: { cat: CategoriaIndicadores; adi
       })),
   );
   const entidades = [{ nombre: entidad, ctx }, ...adicionales];
-  const celda = (c: Ctx, r: FilaComparativa) =>
+  // La fuente de la entidad de la revista va junto al indicador; la de las demas, en su celda.
+  const celda = (c: Ctx, r: FilaComparativa, conMarca: boolean) =>
     c.fila(r.code) ? (
-      <CeldaValor
-        code={r.code}
-        unidad={r.unidad}
-        valor={c.valor(r.code, ctx.fecha)}
-        mesAnterior={c.valor(r.code, ctx.mesAnterior)}
-        anterior={c.valor(r.code, ctx.anioAnterior)}
-      />
+      <div className="flex items-start justify-end gap-1.5">
+        {conMarca && <MarcaCodigo ctx={c} code={r.code} sujeto="Este dato" />}
+        <CeldaValor
+          code={r.code}
+          unidad={r.unidad}
+          valor={c.valor(r.code, ctx.fecha)}
+          mesAnterior={c.valor(r.code, ctx.mesAnterior)}
+          anterior={c.valor(r.code, ctx.anioAnterior)}
+        />
+      </div>
     ) : (
       <span className="text-tinta-tenue">-</span>
     );
@@ -574,7 +591,17 @@ const TablaComparativa = ({ cat, adicionales }: { cat: CategoriaIndicadores; adi
       excel={{ nombre: archivo, columnas: excel }}
       scroll={{ x: "max-content" }}
       columns={[
-        { title: "Indicador", key: "n", fixed: "left", render: (_, r) => <span className="text-tinta">{r.nombre}</span> },
+        {
+          title: "Indicador",
+          key: "n",
+          fixed: "left",
+          render: (_, r) => (
+            <span className="inline-flex items-center gap-1.5 text-tinta">
+              {r.nombre}
+              <MarcaCodigo ctx={ctx} code={r.code} />
+            </span>
+          ),
+        },
         ...entidades.map(({ nombre, ctx: c }, i) => ({
           title: (
             <TituloAyuda
@@ -585,7 +612,7 @@ const TablaComparativa = ({ cat, adicionales }: { cat: CategoriaIndicadores; adi
           key: nombre,
           align: "right" as const,
           onCell: () => ({ className: i === 0 ? CLASE_COLUMNA_ACTIVA : "" }),
-          render: (_: unknown, r: FilaComparativa) => celda(c, r),
+          render: (_: unknown, r: FilaComparativa) => celda(c, r, i > 0),
         })),
       ]}
     />

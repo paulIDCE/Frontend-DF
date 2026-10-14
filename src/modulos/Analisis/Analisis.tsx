@@ -16,6 +16,7 @@ import {
   SwapOutlined,
 } from "@ant-design/icons";
 import { useService } from "@idce/kit";
+import { EstadoFuentes } from "@/modulos/Explorador/FuenteDatos";
 import { archivoEntidad } from "@/services/datosService";
 import { apiEntidad, apiMeta } from "@/services/apiDatos";
 import { cargarListaEntidades } from "./resumenEntidades";
@@ -116,6 +117,7 @@ const Analisis = () => {
             <span className="text-rotulo text-tinta-tenue">Datos actualizados</span>
             <span className="font-semibold text-tinta">{meta ? fmtVersion(meta.versionDatos) : "…"}</span>
           </div>
+          {meta && <EstadoFuentes cuadros={meta.cuadrosPorFuente} advertencias={meta.advertencias} />}
         </div>
       </div>
 

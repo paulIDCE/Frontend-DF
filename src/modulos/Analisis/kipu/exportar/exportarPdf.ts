@@ -172,7 +172,7 @@ const definicion = (informe: InformeEstructurado, imagenes: Map<GraficoInforme, 
     stack: [
       { canvas: [{ type: "line", x1: 0, y1: 0, x2: ANCHO_UTIL, y2: 0, lineWidth: 0.5, lineColor: color.linea.base }], margin: [0, 14, 0, 4] },
       ...(informe.notas.length ? [{ text: `Notas: ${informe.notas.join(" · ")}`, margin: [0, 0, 0, 2] as [number, number, number, number] }] : []),
-      { text: fuenteInforme(informe.corte) },
+      { text: fuenteInforme(informe.corte, informe.fuenteDatos) },
     ],
     fontSize: pt("rotulo"),
     color: color.tinta.tenue,

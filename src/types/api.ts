@@ -63,6 +63,25 @@ export interface CuadroResumen {
   periodos: Rango | null;
 }
 
+/**
+ * De donde salen los numeros (BackendDF/docs/contrato-fuente-datos.md): la BD `idce_bco_coop` o
+ * los JSON de siempre. No confundir con `CuadroResumen.origen` (tipo de cuadro). Puede cambiar entre
+ * llamadas (si la BD cae, todo vuelve como `json`): se lee en cada respuesta.
+ */
+export type FuenteDatos = "bd" | "json";
+export type FuenteDatosCuadro = FuenteDatos | "mixto";
+
+export interface FilasPorFuente {
+  bd: number;
+  json: number;
+  /** Filas sin dato en ninguna fuente (todos sus valores `null`). */
+  sinFuente: number;
+}
+
+/** `true` si el `null` del periodo se debe a falta de meses anteriores en la BD (no es un dato faltante). */
+export const esSinHistoria = (fila: { sinHistoriaHasta?: string | null }, periodo: string) =>
+  fila.sinHistoriaHasta != null && periodo <= fila.sinHistoriaHasta;
+
 export interface FilaApi {
   indice: number;
   /** Estable entre exportaciones: `SFN01|nacional|@1`. */
@@ -76,6 +95,10 @@ export interface FilaApi {
   /** `indice` del padre (solo vista `arbol`). */
   padre: number | null;
   valores: Valores;
+  /** `YYYY-MM`: un `null` hasta esa fecha es "sin historia previa", no un dato faltante. */
+  sinHistoriaHasta: string | null;
+  /** Una fila nunca mezcla fuentes; `null` = sin dato en ninguna. */
+  fuenteDatos: FuenteDatos | null;
 }
 
 export interface CuadroApi {
@@ -99,12 +122,23 @@ export interface CuadroApi {
   periodos: string[];
   filas: FilaApi[];
   notas: string[];
+  fuenteDatos: FuenteDatosCuadro | null;
+  filasPorFuente: FilasPorFuente;
 }
 
 export interface ReporteApi {
   entidad: { id: string; nombre: string; tamano: string | null; rango: string | null; provincia: string | null };
   periodos: string[];
-  cuentas: { cuc: string; variable: string | null; valores: Valores }[];
+  cuentas: {
+    cuc: string;
+    variable: string | null;
+    valores: Valores;
+    sinHistoriaHasta: string | null;
+    fuenteDatos: FuenteDatos | null;
+  }[];
+  /** Sobre las cuentas devueltas. */
+  fuenteDatos: FuenteDatosCuadro | null;
+  filasPorFuente: FilasPorFuente;
 }
 
 export type Agrupacion = "sector" | "activos" | "provincia" | "todas";
@@ -159,4 +193,6 @@ export interface MetaApi {
   /** Ultimo mes con datos a la vez en reportes, balances y sistema. */
   ultimoCorteComun: string | null;
   advertencias: string[];
+  /** Cuadros que salen solo de la BD, solo del JSON o de ambas. `null` si la BD no informa el catalogo. */
+  cuadrosPorFuente: { bd: number; json: number; mixto: number } | null;
 }

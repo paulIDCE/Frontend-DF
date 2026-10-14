@@ -2,6 +2,8 @@ import { Tag } from "antd";
 import { Delta, FilaKpis, KpiCard, TablaAnalitica, TarjetaGrafica } from "@idce/kit";
 import type { InformeEstructurado, KpiInforme, TablaInforme } from "@/services/agenteService";
 import { altoGrafico, fmt, opcionGrafico } from "./graficosInforme";
+import { fuenteInforme } from "./exportar/contenido";
+import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
 
 /**
  * Pinta el informe estructurado que devuelve el workflow de Kipu con los componentes del kit:
@@ -50,7 +52,10 @@ const Tabla = ({ t }: { t: TablaInforme }) => {
 const InformeKipu = ({ informe }: { informe: InformeEstructurado }) => (
   <article className="kipu-informe flex flex-col gap-4 text-cuerpo text-tinta">
     <header className="flex flex-col gap-1">
-      <h2 className="m-0 text-titulo font-bold text-identidad">{informe.titulo}</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="m-0 text-titulo font-bold text-identidad">{informe.titulo}</h2>
+        <InsigniaFuente fuente={informe.fuenteDatos} />
+      </div>
       <span className="text-detalle text-tinta-secundaria">
         {informe.entidad} · {informe.tipoEntidad} · Corte {informe.corte} · Comparado con {informe.comparado_con}
       </span>
@@ -118,8 +123,7 @@ const InformeKipu = ({ informe }: { informe: InformeEstructurado }) => (
 
     <footer className="border-0 border-t border-solid border-linea pt-2 text-rotulo text-tinta-tenue">
       {informe.notas.length > 0 && <p className="m-0 mb-1">Notas: {informe.notas.join(" · ")}</p>}
-      Fuente: estados financieros e indicadores de patrimonio técnico (SB/SEPS), base bco_coop. Corte {informe.corte}. Umbrales de
-      semáforo referenciales. Generado por Kipu · IDCE Consulting: no constituye calificación de riesgo.
+      {fuenteInforme(informe.corte, informe.fuenteDatos)}
     </footer>
   </article>
 );

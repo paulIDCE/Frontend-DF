@@ -5,6 +5,9 @@ import { EmptyState, TablaAnalitica, type ColumnaExcel } from "@idce/kit";
 import type { FilaCuadro } from "./tipos";
 import { etiquetaPeriodo, fmtValor, numero } from "./datos";
 import { columnasAcciones, type PropsTablaSeries } from "./accionesTabla";
+import { CeldaSinHistoria, MarcaFuenteFila } from "./FuenteDatos";
+import { SIGLA_FUENTE, vacioSinHistoria } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Estados financieros detallados (SFN06 / EFI06) — porte de
@@ -47,7 +50,7 @@ const arbolBalances = (filas: FilaCuadro[]): NodoBalance[] => {
   return raices.sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }));
 };
 
-const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }: PropsTablaSeries) => {
+const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, fuenteCuadro, ...acciones }: PropsTablaSeries) => {
   const datos = useMemo(() => arbolBalances(filas), [filas]);
 
   const columnas: TableColumnsType<NodoBalance> = [
@@ -66,6 +69,11 @@ const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }
             <FileTextOutlined className="mr-1 text-tinta-deshabilitada" />
           )}
           {r.fila.Variable}
+          {fuenteCuadro && MODO_DESARROLLO && (
+            <span className="ml-2">
+              <MarcaFuenteFila fuente={r.fila._fuente} alPasar={fuenteCuadro !== "mixto"} />
+            </span>
+          )}
         </span>
       ),
     },
@@ -75,7 +83,8 @@ const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }
       key: p,
       width: 96,
       align: "right" as const,
-      render: (_: unknown, r: NodoBalance) => fmtValor(r.fila[p]),
+      render: (_: unknown, r: NodoBalance) =>
+        vacioSinHistoria(r.fila, p, r.fila[p]) ? <CeldaSinHistoria /> : fmtValor(r.fila[p]),
     })),
     {
       title: "Código",
@@ -93,6 +102,9 @@ const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, ...acciones }
       valor: (r) => numero(r.fila[p]),
       ancho: 12,
     })),
+    ...(fuenteCuadro && MODO_DESARROLLO
+      ? [{ titulo: "Fuente", valor: (r: NodoBalance) => (r.fila._fuente ? SIGLA_FUENTE[r.fila._fuente] : ""), ancho: 8 }]
+      : []),
   ];
 
   if (periodos.length === 0) return <EmptyState mensaje="Sin datos en el período seleccionado" />;

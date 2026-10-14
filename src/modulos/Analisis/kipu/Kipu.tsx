@@ -90,6 +90,19 @@ const HojasValidacion = ({ hojas, onIr }: { hojas: number[]; onIr?: (numero: num
   );
 };
 
+/**
+ * UUID v4 de la sesion. `crypto.randomUUID` solo existe en contextos seguros (HTTPS o localhost);
+ * en un servidor HTTP plano no esta, asi que se arma con `getRandomValues`, que si esta disponible.
+ */
+const nuevoIdSesion = (): string => {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+};
+
 const Burbuja = ({ children }: { children: React.ReactNode }) => (
   <div className="flex items-start gap-2">
     <KipuMascota size={36} className="shrink-0" />
@@ -108,7 +121,7 @@ const Kipu = ({ entidad, archivo, corte, ultimoCorte, hoja, onIrAHoja, tamano, r
   const [verInforme, setVerInforme] = useState(false);
   const [etapa, setEtapa] = useState(0);
   const [exportando, setExportando] = useState<Formato | null>(null);
-  const sesion = useMemo(() => crypto.randomUUID(), []);
+  const sesion = useMemo(() => nuevoIdSesion(), []);
   const solicitud = useRef<AbortController | null>(null);
   const configurado = agenteConfigurado();
 

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Button, Checkbox, Tooltip } from "antd";
 import type { TableColumnsType } from "antd";
 import { EyeOutlined, StarFilled, StarOutlined } from "@ant-design/icons";
+import type { FuenteDatosCuadro } from "@/types/api";
 import type { FilaCuadro } from "./tipos";
 
 /** Props comunes de las tablas del explorador (`TablaCuadro`, `TablaBalances`). */
@@ -22,6 +23,8 @@ export interface PropsTablaSeries {
   /** Botones extra en la barra de la tabla (CSV…). */
   barra?: ReactNode;
   alto?: number;
+  /** Fuente del cuadro: cada fila lleva su marca (en `mixto` siempre visible; si no, al pasar el raton) y las descargas, la columna "Fuente". */
+  fuenteCuadro?: FuenteDatosCuadro | null;
 }
 
 type Acciones = Pick<

@@ -5,6 +5,8 @@
  * (`YYYY-MM`, `YYYY-Tn`). Se leen tal cual; `datos.ts` sabe separarlos.
  */
 
+import type { FilasPorFuente, FuenteDatos, FuenteDatosCuadro } from "@/types/api";
+
 /** Como se carga un cuadro (las funciones `loadXxx` de prueba-data). */
 export type TipoCuadro =
   | "tabla"
@@ -33,6 +35,10 @@ export type FilaCuadro = Record<string, unknown> & {
   Variable?: string;
   /** Nivel jerarquico precalculado (balances usan `Codigo_Base`, no `NivelN`). */
   _nivel?: number;
+  /** De donde salen los valores de la fila (API: `fuenteDatos`). */
+  _fuente?: FuenteDatos | null;
+  /** `YYYY-MM`: los `null` hasta esa fecha son "sin historia previa" (API: `sinHistoriaHasta`). */
+  _sinHistoriaHasta?: string | null;
 };
 
 export type TipoPeriodo = "mensual" | "trimestral" | "anual";
@@ -49,6 +55,9 @@ export interface CuadroCargado {
   /** Sector/entidad al que pertenecen los datos (Sistema/Tasas), para la coleccion y los favoritos. */
   sector?: string;
   sectorNombre?: string;
+  /** De donde salen los numeros del cuadro (`bd`, `json` o `mixto`). */
+  fuenteDatos?: FuenteDatosCuadro | null;
+  filasPorFuente?: FilasPorFuente;
 }
 
 /** Serie en "Mi Colección" (hasta 10). */

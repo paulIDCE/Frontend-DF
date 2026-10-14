@@ -24,12 +24,18 @@ type Params = Record<string, string | number | boolean | undefined | null>;
 const limpiar = (p: Params) =>
   Object.fromEntries(Object.entries(p).filter(([, v]) => v !== undefined && v !== null && v !== ""));
 
-const cache = new Map<string, Promise<unknown>>();
+/**
+ * Vence a los pocos minutos: `fuenteDatos` (BD / JSON) puede cambiar entre llamadas si la BD cae o
+ * vuelve, y el contrato pide no fijarla (BackendDF/docs/contrato-fuente-datos.md §5).
+ */
+const CACHE_VIGENCIA_MS = 5 * 60_000;
+const cache = new Map<string, { promesa: Promise<unknown>; t: number }>();
 
 const leer = <T>(url: string, params: Params = {}): Promise<T> => {
   const limpios = limpiar(params);
   const clave = url + JSON.stringify(limpios);
-  let promesa = cache.get(clave) as Promise<T> | undefined;
+  const guardado = cache.get(clave);
+  let promesa = guardado && Date.now() - guardado.t < CACHE_VIGENCIA_MS ? (guardado.promesa as Promise<T>) : undefined;
   if (!promesa) {
     promesa = api.get<T>(url, { params: limpios }).then((r) => {
       // Sin `baseURL` (p. ej. el cliente se recreo en un HMR antes de `initializeAuthService`) la
@@ -40,7 +46,7 @@ const leer = <T>(url: string, params: Params = {}): Promise<T> => {
       return r.data;
     });
     promesa.catch(() => cache.delete(clave));
-    cache.set(clave, promesa);
+    cache.set(clave, { promesa, t: Date.now() });
   }
   return promesa;
 };

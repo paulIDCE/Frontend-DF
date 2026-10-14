@@ -22,12 +22,15 @@ import {
 } from "@ant-design/icons";
 import { useRevista } from "./RevistaContext";
 import { dec, fechaCorta, fmt, pct, type Dato } from "./datos";
-import { opcionMini, unidadDeGrafica } from "./opciones";
+import { opcionMini, separarCodigos, unidadDeGrafica } from "./opciones";
 import { claseVar } from "./estilos";
 import { PosicionGrupo } from "./PosicionGrupo";
 import { sentidoDe } from "./catalogoIndicadores";
 import { legible } from "./texto";
 import type { UnidadCelda } from "./unidades";
+import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
+import { MarcaCodigo, MarcaCodigos, MarcaFuentes, type DatoFuente } from "./FuentesHoja";
+import type { FilasPorFuente, FuenteDatosCuadro } from "@/types/api";
 
 /**
  * Piezas visuales comunes de la revista, sobre las del kit (`docs/VISTAS_ANALITICAS.md`,
@@ -38,9 +41,23 @@ import type { UnidadCelda } from "./unidades";
  * - graficas con `TarjetaGrafica` y la paleta de datos en orden fijo (`opciones.ts`).
  */
 
-export const CabeceraPagina = ({ titulo, subtitulo }: { titulo: string; subtitulo?: string }) => (
+export const CabeceraPagina = ({
+  titulo,
+  subtitulo,
+  fuente,
+  filasPorFuente,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  /** Hojas con cuadro propio (EFI04, EFI06): de donde salen sus numeros. */
+  fuente?: FuenteDatosCuadro | null;
+  filasPorFuente?: FilasPorFuente;
+}) => (
   <header className="mb-4 border-b border-linea pb-2">
-    <h2 className="m-0 text-titulo font-semibold text-identidad">{legible(titulo)}</h2>
+    <div className="flex flex-wrap items-center gap-2">
+      <h2 className="m-0 text-titulo font-semibold text-identidad">{legible(titulo)}</h2>
+      <InsigniaFuente fuente={fuente} filasPorFuente={filasPorFuente} />
+    </div>
     {subtitulo && <p className="m-0 text-detalle text-tinta-tenue">{legible(subtitulo)}</p>}
   </header>
 );
@@ -99,7 +116,12 @@ export const KpiBox = ({
   const delta = enPuntos ? " pp" : "%";
   return (
     <KpiCard
-      titulo={legible(nombre)}
+      titulo={
+        <span className="inline-flex items-center gap-1.5">
+          {legible(nombre)}
+          <MarcaCodigo ctx={ctx} code={code} />
+        </span>
+      }
       color={color ?? (enPuntos ? "accion" : "monto")}
       valor={d ? fmt(d.actual) : "—"}
       sufijo={unidad}
@@ -241,8 +263,11 @@ export const TablaEstructura = ({ cuentas, alto }: { cuentas: CuentaTabla[]; alt
           key: "n",
           fixed: "left",
           render: (_, r) => (
-            <span className={r.nivel === 1 || !r.nivel ? "font-semibold text-tinta" : r.nivel === 3 ? "text-tinta-secundaria" : "text-tinta"}>
+            <span
+              className={`inline-flex items-center gap-1.5 ${r.nivel === 1 || !r.nivel ? "font-semibold text-tinta" : r.nivel === 3 ? "text-tinta-secundaria" : "text-tinta"}`}
+            >
               {legible(r.name)}
+              <MarcaCodigo ctx={ctx} code={r.code} sujeto="Esta cuenta" />
             </span>
           ),
         },
@@ -285,6 +310,14 @@ interface PropsGrafica {
   /** Controles propios de la grafica (`extra` de `TarjetaGrafica`). */
   extra?: ReactNode;
   onClickPunto?: (evento: { dataIndex: number; name?: string }) => void;
+  /**
+   * Codigos del reporte que pinta la grafica: junto al titulo va su fuente (BD / JSON / CALC, o las
+   * varias si mezcla). Las opciones de `opciones.ts` ya los traen (`conCodigos`); esta prop es para
+   * las opciones armadas en la hoja.
+   */
+  codigos?: string[];
+  /** Fuente de una grafica que no sale del reporte de la entidad (filas de `EFI04`, `EFI06`…). */
+  fuentes?: DatoFuente[];
 }
 
 /**
@@ -297,12 +330,24 @@ export const Grafica = (props: PropsGrafica) => {
   return <GraficaRevista key={String(etiquetas)} {...props} />;
 };
 
-const GraficaRevista = ({ titulo, subtitulo, nota, option, alto = 300, cambioTipo = true, estadisticas, base100, extra, onClickPunto }: PropsGrafica) => {
+const GraficaRevista = ({ titulo, subtitulo, nota, option, alto = 300, cambioTipo = true, estadisticas, base100, extra, onClickPunto, codigos, fuentes }: PropsGrafica) => {
+  const { ctx } = useRevista();
   const texto = typeof titulo === "string" ? legible(titulo) : titulo;
-  const { unidad, option: opcion } = useMemo(() => unidadDeGrafica(option), [option]);
+  const { codigos: deOpcion, option: sinCodigos } = useMemo(() => separarCodigos(option), [option]);
+  const { unidad, option: opcion } = useMemo(() => unidadDeGrafica(sinCodigos), [sinCodigos]);
+  const codes = codigos ?? deOpcion;
   return (
     <TarjetaGrafica
-      titulo={texto}
+      titulo={
+        codes?.length || fuentes?.length ? (
+          <span className="inline-flex flex-wrap items-center gap-1.5">
+            {texto}
+            {fuentes?.length ? <MarcaFuentes datos={fuentes} /> : <MarcaCodigos ctx={ctx} codigos={codes!} />}
+          </span>
+        ) : (
+          texto
+        )
+      }
       subtitulo={
         subtitulo || unidad ? (
           <>
@@ -382,7 +427,10 @@ export const MiniKpi = ({
   return (
     <div className="flex flex-col gap-1 rounded-tarjeta border border-linea bg-superficie p-2">
       <div className="flex items-baseline justify-between gap-2">
-        {grupoPar ? <PosicionGrupo code={code} /> : <span />}
+        <span className="flex items-center gap-1.5">
+          <MarcaCodigo ctx={ctx} code={code} />
+          {grupoPar && <PosicionGrupo code={code} />}
+        </span>
         <span className="text-subtitulo font-semibold text-tinta">
           {d ? fmt(d.actual) : "—"}
           <span className="ml-1 text-rotulo font-normal text-tinta-tenue">{enPuntos ? "%" : "M USD"}</span>

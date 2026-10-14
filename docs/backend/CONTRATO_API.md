@@ -489,6 +489,24 @@ Reemplaza el "Datos actualizados" falso del hub, que hoy muestra la hora actual.
 - `versionDatos` es la fecha de modificación más reciente entre los archivos base. Se usa también para el `ETag`.
 - `ultimoCorteComun` es el menor de los "hasta" de reportes, balances y sistema.
 
+### Fuente de los datos y meses sin historia (BackendDF, 14/10/2026)
+
+Contrato completo: `BackendDF/docs/contrato-fuente-datos.md` (commit `407ca10`). Cambios **aditivos**:
+
+| Dónde | Campo | Valores |
+|---|---|---|
+| `GET /api/cuadros/{id}` y `GET /api/entidades/{id}/reporte` | `fuenteDatos` | `"bd"` \| `"json"` \| `"mixto"` \| `null` |
+| ídem | `filasPorFuente` | `{ bd, json, sinFuente }` (sobre las filas / cuentas devueltas) |
+| cada fila (`filas[]`) y cuenta (`cuentas[]`) | `fuenteDatos` | `"bd"` \| `"json"` \| `null` (una fila nunca mezcla fuentes) |
+| ídem | `sinHistoriaHasta` | `"YYYY-MM"` \| `null`: un `null` en `valores` hasta esa fecha es "sin historia previa en la BD", no un dato faltante |
+| `GET /api/meta` | `cuadrosPorFuente` | `{ bd, json, mixto }` \| `null` (hoy `{ bd: 6, json: 216, mixto: 13 }`) |
+
+- La BD tiene meses desde **2024-01**: tasas y variaciones a 12 meses quedan vacías hasta 2024-12, los promedios del año (ROA, ROE) hasta 2024-11 y la variación mensual (EFI04) en 2024-01.
+- `fuenteDatos` puede cambiar entre llamadas (si la BD cae, todo vuelve como `json`): no se fija por cuadro.
+- No confundir con `origen` de `GET /api/cuadros` (tipo de cuadro).
+
+Uso en el front: tipos en `src/types/api.ts` (`esSinHistoria`), adaptadores (`_fuente`, `_sinHistoriaHasta` en las filas anchas), utilidades en `src/services/fuenteDatos.ts` y piezas visuales en `src/modulos/Explorador/FuenteDatos.tsx` (insignia del cuadro, marca por fila en cuadros mixtos, «—» con tooltip, resumen de `/api/meta`). La banda `AvisoOrigenDatos` usa la fuente real que reporta cada pantalla; `origenCuadro` queda como respaldo para un backend anterior.
+
 ### `GET /api/health` (sin auth)
 - `Healthy` si los archivos base están cargados y el índice de reportes está listo.
 - `Degraded` mientras el índice se construye.

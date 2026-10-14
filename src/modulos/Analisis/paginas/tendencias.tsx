@@ -4,7 +4,8 @@ import { Delta, FilaKpis, FranjaSelectores, KpiCard, TEXTO_GRAFICA } from "@idce
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, seriesFlujo, variacion, zoomRevista, type Ctx } from "../datos";
-import { colorSerie, ejeValor, tooltipSerie } from "../opciones";
+import { colorSerie, conCodigos, ejeValor, tooltipSerie } from "../opciones";
+import { MarcaCodigo } from "../FuentesHoja";
 import { sentidoDe } from "../catalogoIndicadores";
 
 /**
@@ -46,7 +47,7 @@ const opcionGraficoZ = (ctx: Ctx, p: Partida, etiquetas: boolean) => {
     label: { show: etiquetas, position: "top", ...TEXTO_GRAFICA, formatter: (x: { value: number }) => fmt(x.value) },
     ...extra,
   });
-  return {
+  return conCodigos({
     tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },
     legend: { bottom: 26, textStyle: TEXTO_GRAFICA },
     grid: { left: 8, right: 16, top: 24, bottom: 70, containLabel: true },
@@ -59,7 +60,7 @@ const opcionGraficoZ = (ctx: Ctx, p: Partida, etiquetas: boolean) => {
       linea("Acumulado del año", s.acumulado, 1, { lineStyle: { type: "dashed" } }),
       linea("Valor del mes", s.mensual, 2, { type: "bar", barMaxWidth: 18 }),
     ],
-  };
+  }, [p.code]);
 };
 
 const valorEn = (serie: (number | null)[], ctx: Ctx, fecha: string) => serie[ctx.fechas.indexOf(fecha)] ?? null;
@@ -94,7 +95,12 @@ export const HojaTendencias = () => {
       />
       <FilaKpis columnas={3} className="my-3">
         <KpiCard
-          titulo={`TAM · ${partida.nombre}`}
+          titulo={
+            <span className="inline-flex items-center gap-1.5">
+              TAM · {partida.nombre}
+              <MarcaCodigo ctx={ctx} code={partida.code} sujeto="La partida de este TAM" />
+            </span>
+          }
           color="monto"
           valor={tamActual === null ? "—" : fmt(tamActual)}
           sufijo="M USD"

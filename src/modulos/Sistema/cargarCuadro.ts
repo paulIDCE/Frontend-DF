@@ -60,10 +60,12 @@ export const controlesDe = (tipo: TipoCuadro) => ({
 /**
  * Cuadros ya pedidos en esta sesion (por cuadro + filtros que le aplican): volver a uno es
  * inmediato. Se guarda la promesa, asi dos pedidos iguales en vuelo comparten la peticion; si
- * falla, se olvida para poder reintentar.
+ * falla, se olvida para poder reintentar. Vence a los pocos minutos: la fuente de los datos (BD o
+ * JSON) puede cambiar entre llamadas si la BD cae o vuelve, y el contrato pide no fijarla por cuadro.
  */
 const CACHE_MAX = 40;
-const cache = new Map<string, Promise<CuadroCargado>>();
+const CACHE_VIGENCIA_MS = 5 * 60_000;
+const cache = new Map<string, { promesa: Promise<CuadroCargado>; t: number }>();
 
 export const cargarCuadroSistema = (tipo: TipoCuadro, id: string, f: Filtros): Promise<CuadroCargado> => {
   const c = controlesDe(tipo);
@@ -76,11 +78,12 @@ export const cargarCuadroSistema = (tipo: TipoCuadro, id: string, f: Filtros): P
   };
   const clave = JSON.stringify([id, params]);
   const guardado = cache.get(clave);
-  if (guardado) return guardado;
+  if (guardado && Date.now() - guardado.t < CACHE_VIGENCIA_MS) return guardado.promesa;
+  cache.delete(clave);
 
   const promesa = apiCuadro(id, params).then(aCuadroCargado);
   promesa.catch(() => cache.delete(clave));
-  cache.set(clave, promesa);
+  cache.set(clave, { promesa, t: Date.now() });
   if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
   return promesa;
 };

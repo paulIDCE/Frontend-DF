@@ -89,6 +89,7 @@ Se verificaron sobre `public/data/reportes/BP__PICHINCHA.json` (776 CUC), `publi
 | 1.18 | Monto colocado acumulado | 🟡 MOA por mes | — | ✅ Monto colocado acumulado | | Acumulado anual desde `monto_total` en Operaciones |
 | 1.19 | Resumen ejecutivo v1 (sin grupo par) | 🔴 KPIs sueltos en el hub | ✅ Cuadro de mando | 🟡 KPI por tablero | Versión completa en la 5.1 | Hoja de entrada con `FilaKpis`, `MiniGrafica`, CAMELS/PERLAS y los hallazgos del motor v1 |
 | 1.20 | Navegación por secciones + estado en la URL; hojas por segmento unificadas | 🟡 31 hojas en lista | ✅ Navegación por tarea | ✅ Tableros por tema | Estructura de 04 §7 | Reagrupar en `Revista.tsx` y `paginas/index.tsx`; hojas 13–16 y 19–22 con selector de segmento |
+| 1.22 | Trazabilidad de la fuente (BD / JSON) y meses sin historia (issue #48) | 🟡 Origen escrito a mano por pantalla | ✅ `fuenteDatos` por cuadro y fila | ✅ Se dice de dónde sale cada cifra | Contrato de fuente de BackendDF (14/10/2026) | Insignia por cuadro, marca por fila en mixtos, «—» sin historia, columna Fuente en descargas, resumen de `/api/meta`, banda `AvisoOrigenDatos` con la fuente real |
 
 ---
 
@@ -288,7 +289,8 @@ Verificación: `pnpm typecheck` y `pnpm lint` sin errores (los 23 avisos ya exis
 | `EFI04` fuentes y usos no cuadran (fuentes ≠ usos + resultados) | Hoja 34 |
 | Saltos bruscos en CAMELS: Cobertura patrimonial 78,2 → −78,3 y Componente C 57,5 → 3,5 en un mes | BP. Pichincha, jun-26 → jul-26 |
 | `SB036` (rendimiento de la cartera) en una escala distinta (≈1.235) | BP. Pichincha, jul-26 |
-| De SQL solo salen los saldos @NNNN y los 5 indicadores de solvencia; las fórmulas (anualizados, fuentes y usos, PERLAS, CAMELS, horizontal / vertical) siguen en el JSON | BackendDF, 05/10/2026 (`CONTRATO_API.md`, `/api/health`). En producción el front lo avisa con una banda por vista (`AvisoOrigenDatos`). Issues #3, #4, #8, #10, #11 y #35 |
+| De SQL solo salen los saldos @NNNN y los 5 indicadores de solvencia; las fórmulas (anualizados, fuentes y usos, PERLAS, CAMELS, horizontal / vertical) siguen en el JSON | BackendDF, 05/10/2026 (`CONTRATO_API.md`, `/api/health`). En producción el front lo avisa con una banda por vista (`AvisoOrigenDatos`). Issues #3, #4, #8, #10, #11 y #35. **Actualizado 14/10/2026:** las fórmulas del catálogo (márgenes, vertical / horizontal, ROA, ROE, tasas a 12 meses) ya salen de la BD; morosidad, CAMELS, PERLAS y tasas de interés siguen en JSON. La API dice la fuente de cada cuadro y fila (`fuenteDatos`) y el front la muestra (ítem 1.22) |
+| La BD solo tiene meses desde 2024-01: tasas a 12 meses vacías hasta 2024-12, ROA / ROE hasta 2024-11, variación mensual en 2024-01 | `sinHistoriaHasta` por fila (contrato de fuente, 14/10/2026); el front muestra «—» con tooltip. Advertencia C1 de `/api/meta`: el sistema financiero se muestra solo en la ventana de la BD. C2: las cuentas contingentes (6) y de orden (7) no están en la BD (afecta la gráfica de castigados 7103 de la hoja de cartera) |
 
 **Kit (`@idce/kit`)**
 

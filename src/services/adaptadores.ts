@@ -30,6 +30,8 @@ export const aCuadroCargado = (c: CuadroApi): CuadroCargado => {
     vista: c.vista,
     sector: partes.join("|") || undefined,
     sectorNombre: partes.join(" · ") || undefined,
+    fuenteDatos: c.fuenteDatos ?? null,
+    filasPorFuente: c.filasPorFuente,
     filas: c.filas.map<FilaCuadro>((f) => ({
       Cuadro: c.id,
       Titulo_Cuadro: c.titulo,
@@ -41,6 +43,9 @@ export const aCuadroCargado = (c: CuadroApi): CuadroCargado => {
       // `Nivel` lo lee TablaBalances (arbol); `_nivel`, nivelFila (grupos).
       Nivel: f.nivel,
       _nivel: f.nivel,
+      // Con prefijo `_`: no son periodos, asi no llegan a tablas, graficas ni descargas.
+      _fuente: f.fuenteDatos ?? null,
+      _sinHistoriaHasta: f.sinHistoriaHasta ?? null,
       ...columnas(c.periodos, f.valores),
     })),
   };
@@ -55,6 +60,8 @@ export const aFilasReporte = (r: ReporteApi): FilaReporte[] =>
     ...(i === 0
       ? { Tamaño: texto(r.entidad.tamano), Rango_Activos: texto(r.entidad.rango), DPA_PR: texto(r.entidad.provincia) }
       : {}),
+    _fuente: c.fuenteDatos ?? null,
+    _sinHistoriaHasta: c.sinHistoriaHasta ?? null,
     ...columnas(r.periodos, c.valores),
   }));
 

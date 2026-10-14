@@ -2,6 +2,8 @@ import FileSaver from "file-saver";
 import type { InformeEstructurado, KpiInforme } from "@/services/agenteService";
 import { color, tipografia } from "@idce/kit";
 import { fmt } from "../graficosInforme";
+import { ETIQUETA_FUENTE } from "@/services/fuenteDatos";
+import type { FuenteDatosCuadro } from "@/types/api";
 
 /**
  * Textos y colores comunes a las descargas Word y PDF, para que ambos documentos digan lo mismo
@@ -13,8 +15,9 @@ export const COLOR_SEMAFORO_DOC = { v: color.exito.base, a: color.advertencia.ba
 export const subtituloInforme = (i: InformeEstructurado) =>
   `${i.entidad} · ${i.tipoEntidad} · Corte ${i.corte} · Comparado con ${i.comparado_con}`;
 
-export const fuenteInforme = (corte: string) =>
+export const fuenteInforme = (corte: string, fuenteDatos?: FuenteDatosCuadro | null) =>
   `Fuente: estados financieros e indicadores de patrimonio técnico (SB/SEPS), base bco_coop. Corte ${corte}. ` +
+  (fuenteDatos ? `Datos: ${ETIQUETA_FUENTE[fuenteDatos].toLowerCase()}. ` : "") +
   "Umbrales de semáforo referenciales. Generado por Kipu · IDCE Consulting: no constituye calificación de riesgo.";
 
 export const valorKpi = (k: KpiInforme) =>

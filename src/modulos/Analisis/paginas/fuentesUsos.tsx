@@ -3,7 +3,8 @@ import { Spin } from "antd";
 import { EstadoError, TEXTO_GRAFICA, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
 import { apiCuadro } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
-import type { CuadroApi } from "@/types/api";
+import { esSinHistoria, type CuadroApi } from "@/types/api";
+import { CeldaSinHistoria } from "@/modulos/Explorador/FuenteDatos";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
@@ -23,6 +24,9 @@ interface FilaFU {
   nivel: number;
   anterior: number | null;
   actual: number | null;
+  /** Vacio por falta del mes anterior en la BD (variacion mensual de 2024-01), no dato faltante. */
+  sinHistoriaAnterior?: boolean;
+  sinHistoriaActual?: boolean;
   children?: FilaFU[];
 }
 
@@ -50,6 +54,8 @@ const arbolFU = (c: CuadroApi, fecha: string): FilaFU[] => {
       nivel: f.nivel,
       anterior: valorEn(c, v, anterior),
       actual: valorEn(c, v, fecha),
+      sinHistoriaAnterior: esSinHistoria(f, anterior),
+      sinHistoriaActual: esSinHistoria(f, fecha),
     };
     if (f.nivel === 1 || !padre) {
       grupo.children!.push(fila);
@@ -111,7 +117,12 @@ export const HojaFuentesUsos = () => {
 
   return (
     <>
-      <CabeceraPagina titulo="ESTADO DE FUENTES Y USOS" subtitulo={`${cuadro.unidad ?? "Millones USD"} · variaciones del mes`} />
+      <CabeceraPagina
+        titulo="ESTADO DE FUENTES Y USOS"
+        subtitulo={`${cuadro.unidad ?? "Millones USD"} · variaciones del mes`}
+        fuente={cuadro.fuenteDatos}
+        filasPorFuente={cuadro.filasPorFuente}
+      />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <TablaAnalitica<FilaFU>
           rowKey="key"
@@ -131,8 +142,8 @@ export const HojaFuentesUsos = () => {
                 <span className={r.nivel === 0 ? "font-bold uppercase text-tinta" : r.nivel === 1 ? "font-semibold" : ""}>{r.nombre}</span>
               ),
             },
-            { title: fechaCorta(restarMeses(ctx.fecha, 1)), key: "a", align: "right", render: (_, r) => (r.anterior === null ? "" : fmt(r.anterior)) },
-            { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => (r.actual === null ? "" : <strong>{fmt(r.actual)}</strong>) },
+            { title: fechaCorta(restarMeses(ctx.fecha, 1)), key: "a", align: "right", render: (_, r) => (r.anterior === null ? r.sinHistoriaAnterior && <CeldaSinHistoria /> : fmt(r.anterior)) },
+            { title: fechaCorta(ctx.fecha), key: "c", align: "right", render: (_, r) => (r.actual === null ? r.sinHistoriaActual && <CeldaSinHistoria /> : <strong>{fmt(r.actual)}</strong>) },
           ]}
         />
         <Grafica

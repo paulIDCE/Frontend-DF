@@ -1,3 +1,4 @@
+import { ETIQUETA_FUENTE, SIGLA_FUENTE } from "@/services/fuenteDatos";
 import type { CuadroCargado } from "./tipos";
 
 /**
@@ -15,10 +16,13 @@ export const descargarCsv = (cuadro: CuadroCargado, periodos: string[]) => {
   csv += `Cuadro: ${cuadro.titulo}\n`;
   if (cuadro.unidad) csv += `Unidad: ${cuadro.unidad}\n`;
   if (cuadro.sectorNombre) csv += `Sector: ${cuadro.sectorNombre}\n`;
+  const fuente = cuadro.fuenteDatos;
+  if (fuente) csv += `Fuente de los datos: ${ETIQUETA_FUENTE[fuente]}\n`;
   csv += "\n";
-  csv += ["Grupo", "Variable", ...periodos].map(celda).join(",") + "\n";
+  csv += ["Grupo", "Variable", ...periodos, ...(fuente ? ["Fuente"] : [])].map(celda).join(",") + "\n";
   cuadro.filas.forEach((f) => {
-    csv += [f.Grupo, f.Variable, ...periodos.map((p) => f[p])].map(celda).join(",") + "\n";
+    const sigla = f._fuente ? SIGLA_FUENTE[f._fuente] : "";
+    csv += [f.Grupo, f.Variable, ...periodos.map((p) => f[p]), ...(fuente ? [sigla] : [])].map(celda).join(",") + "\n";
   });
 
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));

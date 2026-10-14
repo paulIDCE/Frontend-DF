@@ -44,6 +44,9 @@ export const useReportarOrigen = (origen: OrigenDatos) => {
 const CUADROS_MIXTOS = new Set(["EFI01", "SFN01", "EFI02", "SFN02", "EFI05", "EFI07", "EFI10"]);
 
 /**
+ * Respaldo para un backend anterior al contrato de fuente (BackendDF/docs/contrato-fuente-datos.md,
+ * 14/10/2026): desde entonces cada cuadro trae `fuenteDatos` y las pantallas reportan ese valor.
+ *
  * Origen de `GET /api/cuadros/{id}`. EFI06 / SFN06 solo traen SQL en el analisis "saldo"
  * (horizontal y vertical salen del JSON). Los demas cuadros (macro BCE, anualizados, fuentes y
  * usos, indicadores, CAMELS, PERLAS, cartera, tasas, SFN05/07/08) son JSON.

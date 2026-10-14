@@ -32,7 +32,7 @@ const ESTILO: Record<Aviso, { clase: string; icono: React.ReactNode; titulo: str
     icono: <WarningFilled />,
     titulo: "Datos mixtos",
     texto:
-      "Los saldos contables vienen de la base de datos; los indicadores, fórmulas, títulos y el orden de las filas, de archivos JSON.",
+      "Una parte de los valores viene de la base de datos y otra de archivos JSON; en las tablas cada fila indica su fuente (BD / JSON).",
   },
   json: {
     clase: "bg-error",

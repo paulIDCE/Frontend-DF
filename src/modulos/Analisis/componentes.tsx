@@ -28,6 +28,8 @@ import { PosicionGrupo } from "./PosicionGrupo";
 import { sentidoDe } from "./catalogoIndicadores";
 import { legible } from "./texto";
 import type { UnidadCelda } from "./unidades";
+import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
+import type { FilasPorFuente, FuenteDatosCuadro } from "@/types/api";
 
 /**
  * Piezas visuales comunes de la revista, sobre las del kit (`docs/VISTAS_ANALITICAS.md`,
@@ -38,9 +40,23 @@ import type { UnidadCelda } from "./unidades";
  * - graficas con `TarjetaGrafica` y la paleta de datos en orden fijo (`opciones.ts`).
  */
 
-export const CabeceraPagina = ({ titulo, subtitulo }: { titulo: string; subtitulo?: string }) => (
+export const CabeceraPagina = ({
+  titulo,
+  subtitulo,
+  fuente,
+  filasPorFuente,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  /** Hojas con cuadro propio (EFI04, EFI06): de donde salen sus numeros. */
+  fuente?: FuenteDatosCuadro | null;
+  filasPorFuente?: FilasPorFuente;
+}) => (
   <header className="mb-4 border-b border-linea pb-2">
-    <h2 className="m-0 text-titulo font-semibold text-identidad">{legible(titulo)}</h2>
+    <div className="flex flex-wrap items-center gap-2">
+      <h2 className="m-0 text-titulo font-semibold text-identidad">{legible(titulo)}</h2>
+      <InsigniaFuente fuente={fuente} filasPorFuente={filasPorFuente} />
+    </div>
     {subtitulo && <p className="m-0 text-detalle text-tinta-tenue">{legible(subtitulo)}</p>}
   </header>
 );

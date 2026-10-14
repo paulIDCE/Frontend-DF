@@ -172,6 +172,8 @@ export const HojaAuditoria = () => {
       <CabeceraPagina
         titulo="AUDITORÍA DE DESVIACIONES"
         subtitulo="Partidas con variaciones anómalas contra el mismo mes del año anterior (importancia ALTA / MEDIA / BAJA)"
+        fuente={cuadro?.fuenteDatos}
+        filasPorFuente={cuadro?.filasPorFuente}
       />
       <FranjaSelectores
         grupos={[

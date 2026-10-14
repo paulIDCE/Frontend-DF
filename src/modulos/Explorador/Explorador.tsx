@@ -3,6 +3,7 @@ import { Button, Drawer, Modal, Select, Skeleton, Spin, Tabs, Tooltip, Tree } fr
 import type { TreeDataNode } from "antd";
 import { FileTextOutlined, InfoCircleOutlined, MenuOutlined } from "@ant-design/icons";
 import { BarraExpandirArbol, EstadoError, TarjetaGrafica, showToast, type ErrorPresentable } from "@idce/kit";
+import { InsigniaFuente } from "./FuenteDatos";
 import type { CuadroCargado, ItemFavorito, NodoCuadro, SerieColeccion } from "./tipos";
 import { etiquetaPeriodo, nivelFila, rangoPorDefecto, unionPeriodos } from "./datos";
 import { opcionSeries, ventanaSeries } from "./graficas";
@@ -302,6 +303,7 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
       esFavorito,
       onFavorito,
       nombreExcel: nombreDescarga(cuadro),
+      fuenteCuadro: cuadro.fuenteDatos,
       barra: (
         <Tooltip title="Descargar CSV">
           <Button
@@ -332,9 +334,12 @@ const Explorador = ({ arbol, nodoActivo, onElegir, cuadro, cargando, error, onRe
           </Button>
           <div className="min-w-0 flex-1">
             {/* Mientras carga, el titulo del cuadro elegido (no el del anterior). */}
-            <h2 className="m-0 text-titulo font-bold text-identidad">
-              {(cargando ? tituloNodo : cuadro?.titulo || tituloNodo) || "\u00a0"}
-            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="m-0 text-titulo font-bold text-identidad">
+                {(cargando ? tituloNodo : cuadro?.titulo || tituloNodo) || "\u00a0"}
+              </h2>
+              {!cargando && <InsigniaFuente fuente={cuadro?.fuenteDatos} filasPorFuente={cuadro?.filasPorFuente} />}
+            </div>
             {!cargando && cuadro?.unidad && <p className="m-0 text-detalle text-tinta-tenue">{cuadro.unidad}</p>}
           </div>
         </div>

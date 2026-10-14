@@ -299,7 +299,7 @@ export const exportarWord = async (
       border: { top: { style: BorderStyle.SINGLE, size: 4, color: hex(color.linea.base), space: 4 } },
       children: [
         ...(informe.notas.length ? [new TextRun({ text: `Notas: ${informe.notas.join(" · ")}`, size: medios("rotulo"), color: hex(color.tinta.tenue) })] : []),
-        new TextRun({ text: fuenteInforme(informe.corte), size: medios("rotulo"), color: hex(color.tinta.tenue), ...(informe.notas.length ? { break: 1 } : {}) }),
+        new TextRun({ text: fuenteInforme(informe.corte, informe.fuenteDatos), size: medios("rotulo"), color: hex(color.tinta.tenue), ...(informe.notas.length ? { break: 1 } : {}) }),
       ],
     }),
   );

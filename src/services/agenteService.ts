@@ -1,3 +1,4 @@
+import type { FuenteDatosCuadro } from "@/types/api";
 import type { RoutesConfig } from "@/types/routesConfig";
 
 /**
@@ -121,6 +122,8 @@ export interface InformeEstructurado {
   secciones: { clave: string; titulo: string; texto: string; graficos: GraficoInforme[]; tablas: TablaInforme[] }[];
   alertas: string[];
   notas: string[];
+  /** De donde salen los datos del informe (BD / JSON / mixto), si el workflow lo informa. */
+  fuenteDatos?: FuenteDatosCuadro | null;
 }
 
 export type ResultadoInforme =

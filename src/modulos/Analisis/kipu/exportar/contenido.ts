@@ -3,6 +3,7 @@ import type { InformeEstructurado, KpiInforme } from "@/services/agenteService";
 import { color, tipografia } from "@idce/kit";
 import { fmt } from "../graficosInforme";
 import { ETIQUETA_FUENTE } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 import type { FuenteDatosCuadro } from "@/types/api";
 
 /**
@@ -17,7 +18,8 @@ export const subtituloInforme = (i: InformeEstructurado) =>
 
 export const fuenteInforme = (corte: string, fuenteDatos?: FuenteDatosCuadro | null) =>
   `Fuente: estados financieros e indicadores de patrimonio técnico (SB/SEPS), base bco_coop. Corte ${corte}. ` +
-  (fuenteDatos ? `Datos: ${ETIQUETA_FUENTE[fuenteDatos].toLowerCase()}. ` : "") +
+  // BD / JSON solo con la bandera de desarrollo; la cita SB/SEPS va siempre.
+  (fuenteDatos && MODO_DESARROLLO ? `Datos: ${ETIQUETA_FUENTE[fuenteDatos].toLowerCase()}. ` : "") +
   "Umbrales de semáforo referenciales. Generado por Kipu · IDCE Consulting: no constituye calificación de riesgo.";
 
 export const valorKpi = (k: KpiInforme) =>

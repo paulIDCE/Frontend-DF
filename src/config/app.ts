@@ -14,7 +14,7 @@ export const menuPath = (ruta: string): string =>
   `${MODULOS_BASE_PATH}/${ruta.replace(/^\/+/, "")}`;
 
 /**
- * De donde salen los datos de una pantalla (banda de `AvisoOrigenDatos`, solo en produccion):
+ * De donde salen los datos de una pantalla (banda de `AvisoOrigenDatos`, solo con `VITE_DEVELOPMENT`):
  * - `bd`: todo de la BD (verde). Hoy ninguna: BackendDF siempre toma del JSON el orden de filas,
  *   los titulos y el catalogo de entidades.
  * - `mixto`: saldos de cuentas @NNNN desde SQL y el resto del JSON (amarillo).

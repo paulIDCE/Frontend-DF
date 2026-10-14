@@ -16,6 +16,26 @@ export const SIGLA_FUENTE: Record<FuenteDatos, string> = { bd: "BD", json: "JSON
 
 export const TEXTO_SIN_HISTORIA = "Sin historia previa en la base de datos";
 
+/**
+ * Fuente de una fila de la revista: la de la API o, si la fila no vino de la API (indicadores
+ * `DER_*` de `derivados.ts`), `calculado` en la app. `null` = la API no informa la fuente.
+ */
+export type FuenteFila = FuenteDatos | "calculado";
+
+export const fuenteDeFila = (fila: Record<string, unknown> | undefined): FuenteFila | null => {
+  if (!fila) return null;
+  if (!("_fuente" in fila)) return "calculado";
+  return fila._fuente === "bd" || fila._fuente === "json" ? fila._fuente : null;
+};
+
+export const SIGLA_FILA: Record<FuenteFila, string> = { ...SIGLA_FUENTE, calculado: "CALC" };
+
+export const TEXTO_FILA: Record<FuenteFila, string> = {
+  bd: "la base de datos",
+  json: "archivos JSON",
+  calculado: "un cálculo de la app a partir de cuentas del reporte",
+};
+
 /** Fuente de un conjunto de filas anchas (`_fuente`): la revista solo tiene filas, no el reporte. */
 export const fuenteDeFilas = (filas: Record<string, unknown>[]): FuenteDatosCuadro | null => {
   const hay = new Set(filas.map((f) => f._fuente).filter((f): f is FuenteDatos => f === "bd" || f === "json"));

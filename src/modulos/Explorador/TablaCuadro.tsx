@@ -14,6 +14,7 @@ import { etiquetaPeriodo, fmtValor, nivelFila, numero } from "./datos";
 import { columnasAcciones, type PropsTablaSeries } from "./accionesTabla";
 import { CeldaSinHistoria, MarcaFuenteFila } from "./FuenteDatos";
 import { SIGLA_FUENTE, vacioSinHistoria } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Tabla del cuadro — porte de `renderTable` de prueba-data: arbol segun el nivel (expandir /
@@ -137,7 +138,7 @@ const TablaCuadro = ({ filas, periodos, alto = 520, nombreExcel, fuenteCuadro, .
       valor: (r) => (r.tipo === "dato" ? numero(r.fila[p]) : null),
       ancho: 12,
     })),
-    ...(fuenteCuadro
+    ...(fuenteCuadro && MODO_DESARROLLO
       ? [{ titulo: "Fuente", valor: (r: FilaTabla) => (r.tipo === "dato" && r.fila._fuente ? SIGLA_FUENTE[r.fila._fuente] : ""), ancho: 8 }]
       : []),
   ];

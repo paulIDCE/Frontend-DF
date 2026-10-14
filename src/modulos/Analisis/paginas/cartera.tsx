@@ -4,6 +4,7 @@ import { FilaKpis, useService, TEXTO_GRAFICA } from "@idce/kit";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, KpiBox, MiniKpi } from "../componentes";
 import { ETIQUETA_FUENTE } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 import { NOTA_DERIVADO, NOTA_SEGMENTACION_2021, notas } from "../notas";
 import { cargarBalanceEFI06 } from "../resumenEntidades";
 import { fechaLarga, fmt, zoomRevista } from "../datos";
@@ -73,8 +74,9 @@ const ActivosCastigados = () => {
   return (
     <Grafica
       titulo="Activos castigados (cuenta de orden 7103)"
+      fuentes={[{ fuente: fila.fuenteDatos, nombre: "Activos castigados (7103)" }]}
       nota={`Saldo de los activos castigados que la entidad mantiene en cuentas de orden. Fuente: balance EFI06${
-        cuadro.fuenteDatos ? ` (${ETIQUETA_FUENTE[cuadro.fuenteDatos].toLowerCase()})` : ""
+        cuadro.fuenteDatos && MODO_DESARROLLO ? ` (${ETIQUETA_FUENTE[cuadro.fuenteDatos].toLowerCase()})` : ""
       }.`}
       option={{
         tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },

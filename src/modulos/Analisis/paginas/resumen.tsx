@@ -6,6 +6,7 @@ import { CabeceraPagina, KpiBox, MiniKpi } from "../componentes";
 import { calificacion } from "../calificacion";
 import { fechaCorta, fmt } from "../datos";
 import { PanelDiagnostico } from "../diagnostico/PanelDiagnostico";
+import { MarcaCodigo } from "../FuentesHoja";
 
 /**
  * Hoja "Resumen ejecutivo" v1 (Managerial Analyzer "Cuadro de mando"; plan 06, item 1.19): KPIs
@@ -56,7 +57,10 @@ const Calificacion = ({ titulo, code }: { titulo: string; code: string }) => {
         {c.letra}
       </span>
       <span className="flex flex-col">
-        <span className="text-rotulo font-bold uppercase text-tinta-secundaria">{titulo}</span>
+        <span className="flex items-center gap-1.5 text-rotulo font-bold uppercase text-tinta-secundaria">
+          {titulo}
+          <MarcaCodigo ctx={ctx} code={code} />
+        </span>
         <span className="text-cuerpo font-bold text-tinta">
           {fmt(d.actual)} · {c.texto.slice(4)}
         </span>

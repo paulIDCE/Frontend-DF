@@ -4,7 +4,9 @@ import { EstadoError, TEXTO_GRAFICA, TablaAnalitica, useService, type ColumnaExc
 import { apiCuadro } from "@/services/apiDatos";
 import { archivoEntidad } from "@/services/datosService";
 import { esSinHistoria, type CuadroApi } from "@/types/api";
-import { CeldaSinHistoria } from "@/modulos/Explorador/FuenteDatos";
+import { CeldaSinHistoria, MarcaFuenteFila } from "@/modulos/Explorador/FuenteDatos";
+import { MarcaFuentes } from "../FuentesHoja";
+import type { FuenteFila } from "@/services/fuenteDatos";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
@@ -27,8 +29,12 @@ interface FilaFU {
   /** Vacio por falta del mes anterior en la BD (variacion mensual de 2024-01), no dato faltante. */
   sinHistoriaAnterior?: boolean;
   sinHistoriaActual?: boolean;
+  fuente?: FuenteFila | null;
   children?: FilaFU[];
 }
+
+/** Cuentas de un grupo (todas las del subarbol), para la marca de fuente del grupo. */
+const hojas = (f: FilaFU): FilaFU[] => (f.children?.length ? f.children.flatMap((h) => [h, ...hojas(h)]) : []);
 
 const valorEn = (c: CuadroApi, valores: (number | null)[], fecha: string) => {
   const i = c.periodos.indexOf(fecha);
@@ -56,6 +62,7 @@ const arbolFU = (c: CuadroApi, fecha: string): FilaFU[] => {
       actual: valorEn(c, v, fecha),
       sinHistoriaAnterior: esSinHistoria(f, anterior),
       sinHistoriaActual: esSinHistoria(f, fecha),
+      fuente: f.fuenteDatos,
     };
     if (f.nivel === 1 || !padre) {
       grupo.children!.push(fila);
@@ -69,7 +76,7 @@ const arbolFU = (c: CuadroApi, fecha: string): FilaFU[] => {
 const principales = (c: CuadroApi, grupo: string, fecha: string, n = 6) =>
   c.filas
     .filter((f) => f.grupo === grupo && f.nivel === 2)
-    .map((f) => ({ nombre: f.variable ?? "", valor: valorEn(c, f.valores as (number | null)[], fecha) ?? 0 }))
+    .map((f) => ({ nombre: f.variable ?? "", valor: valorEn(c, f.valores as (number | null)[], fecha) ?? 0, fuente: f.fuenteDatos }))
     .filter((x) => x.valor > 0)
     .sort((a, b) => b.valor - a.valor)
     .slice(0, n);
@@ -109,6 +116,8 @@ export const HojaFuentesUsos = () => {
       </div>
     );
 
+  const fuentesMes = principales(cuadro, "FUENTES", ctx.fecha);
+  const usosMes = principales(cuadro, "USOS", ctx.fecha);
   const excel: ColumnaExcel<FilaFU>[] = [
     { titulo: "Cuenta", valor: (r) => r.nombre, ancho: 60 },
     { titulo: fechaCorta(restarMeses(ctx.fecha, 1)), valor: (r) => r.anterior ?? "", ancho: 14 },
@@ -139,7 +148,14 @@ export const HojaFuentesUsos = () => {
               title: "Cuenta",
               key: "n",
               render: (_, r) => (
-                <span className={r.nivel === 0 ? "font-bold uppercase text-tinta" : r.nivel === 1 ? "font-semibold" : ""}>{r.nombre}</span>
+                <span className={`inline-flex items-center gap-1.5 ${r.nivel === 0 ? "font-bold uppercase text-tinta" : r.nivel === 1 ? "font-semibold" : ""}`}>
+                  {r.nombre}
+                  {r.nivel === 0 ? (
+                    <MarcaFuentes sujeto="Este grupo" datos={hojas(r).map((h) => ({ fuente: h.fuente, nombre: h.nombre }))} />
+                  ) : (
+                    <MarcaFuenteFila fuente={r.fuente} sujeto="Esta cuenta" />
+                  )}
+                </span>
               ),
             },
             { title: fechaCorta(restarMeses(ctx.fecha, 1)), key: "a", align: "right", render: (_, r) => (r.anterior === null ? r.sinHistoriaAnterior && <CeldaSinHistoria /> : fmt(r.anterior)) },
@@ -149,7 +165,8 @@ export const HojaFuentesUsos = () => {
         <Grafica
           titulo={`Principales fuentes y usos - ${fechaCorta(ctx.fecha)}`}
           nota={cuadro.notas[0]}
-          option={opcionPrincipales(principales(cuadro, "FUENTES", ctx.fecha), principales(cuadro, "USOS", ctx.fecha), etiquetas)}
+          option={opcionPrincipales(fuentesMes, usosMes, etiquetas)}
+          fuentes={[...fuentesMes, ...usosMes]}
           alto={520}
           cambioTipo={false}
         />

@@ -19,7 +19,8 @@ import { useRevista } from "../RevistaContext";
 import { legible } from "../texto";
 import { CabeceraPagina, CeldaNumero, CeldaValor, Grafica, useNombreDescarga } from "../componentes";
 import { fechaCorta, fechaLarga, fmt, zoomRevista, type Dato } from "../datos";
-import { colorSerie, opcionComparativoAnual, ejeValor, tooltipSerie } from "../opciones";
+import { colorSerie, conCodigos, opcionComparativoAnual, ejeValor, tooltipSerie } from "../opciones";
+import { MarcaCodigo } from "../FuentesHoja";
 
 /** Hojas 1 (Balance General) y 2 (Evolución Histórica). */
 
@@ -86,7 +87,12 @@ export const Hoja1 = () => {
           .map((f) => (
             <KpiCard
               key={f.code}
-              titulo={f.kpi}
+              titulo={
+                <span className="inline-flex items-center gap-1.5">
+                  {f.kpi}
+                  <MarcaCodigo ctx={ctx} code={f.code} />
+                </span>
+              }
               icono={ICONO_KPI[f.code]}
               color={f.code === "Gan_Eje" ? (f.d!.actual >= 0 ? "bueno" : "malo") : f.code === "@3" ? "accion" : "monto"}
               valor={fmt(f.d!.actual)}
@@ -115,8 +121,9 @@ export const Hoja1 = () => {
                 dataIndex: "name",
                 onCell: resaltar,
                 render: (v: string, r) => (
-                  <span className={`font-semibold ${r.code === cuentaActiva?.code && !impresion ? "text-accion" : "text-tinta"}`}>
+                  <span className={`inline-flex items-center gap-1.5 font-semibold ${r.code === cuentaActiva?.code && !impresion ? "text-accion" : "text-tinta"}`}>
                     {v}
+                    <MarcaCodigo ctx={ctx} code={r.code} sujeto="Esta cuenta" />
                   </span>
                 ),
               },
@@ -181,7 +188,8 @@ export const Hoja2 = () => {
         return { name: s, data: ctx.fechas.map((d) => (f ? parseFloat(String(f[d])) || 0 : 0)) };
       }),
     ];
-    return {
+    // La marca de fuente es la de la entidad; los sectores salen de las series del sistema.
+    return conCodigos({
       tooltip: { trigger: "axis", confine: true, ...tooltipSerie("musd") },
       legend: { type: "scroll", bottom: 26, textStyle: TEXTO_GRAFICA },
       grid: { left: 8, right: 16, top: 24, bottom: 80, containLabel: true },
@@ -204,7 +212,7 @@ export const Hoja2 = () => {
         areaStyle: { opacity: i === 0 ? 0.15 : 0.05 },
         label: { show: etiquetas, position: "top", ...TEXTO_GRAFICA, formatter: (p: { value: number }) => fmt(p.value) },
       })),
-    };
+    }, [code]);
   };
 
   return (

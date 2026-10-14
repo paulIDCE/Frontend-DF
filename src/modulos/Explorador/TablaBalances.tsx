@@ -7,6 +7,7 @@ import { etiquetaPeriodo, fmtValor, numero } from "./datos";
 import { columnasAcciones, type PropsTablaSeries } from "./accionesTabla";
 import { CeldaSinHistoria, MarcaFuenteFila } from "./FuenteDatos";
 import { SIGLA_FUENTE, vacioSinHistoria } from "@/services/fuenteDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Estados financieros detallados (SFN06 / EFI06) — porte de
@@ -68,7 +69,7 @@ const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, fuenteCuadro,
             <FileTextOutlined className="mr-1 text-tinta-deshabilitada" />
           )}
           {r.fila.Variable}
-          {fuenteCuadro && (
+          {fuenteCuadro && MODO_DESARROLLO && (
             <span className="ml-2">
               <MarcaFuenteFila fuente={r.fila._fuente} alPasar={fuenteCuadro !== "mixto"} />
             </span>
@@ -101,7 +102,7 @@ const TablaBalances = ({ filas, periodos, alto = 520, nombreExcel, fuenteCuadro,
       valor: (r) => numero(r.fila[p]),
       ancho: 12,
     })),
-    ...(fuenteCuadro
+    ...(fuenteCuadro && MODO_DESARROLLO
       ? [{ titulo: "Fuente", valor: (r: NodoBalance) => (r.fila._fuente ? SIGLA_FUENTE[r.fila._fuente] : ""), ancho: 8 }]
       : []),
   ];

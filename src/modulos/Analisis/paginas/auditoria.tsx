@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { InputNumber, Segmented, Spin, Switch } from "antd";
 import { EstadoError, FranjaSelectores, TablaAnalitica, useService, type ColumnaExcel } from "@idce/kit";
 import type { CuadroApi } from "@/types/api";
+import type { FuenteFila } from "@/services/fuenteDatos";
+import { MarcaFuenteFila } from "@/modulos/Explorador/FuenteDatos";
 import { useRevista } from "../RevistaContext";
 import { CabeceraPagina, useNombreDescarga } from "../componentes";
 import { fechaCorta, fmt, restarMeses } from "../datos";
@@ -42,6 +44,7 @@ interface FilaAuditoria {
   nivel: number;
   celdas: Celda[];
   maximo: Nivel;
+  fuente: FuenteFila | null;
   children?: FilaAuditoria[];
 }
 
@@ -100,6 +103,7 @@ const construir = (cuadro: CuadroApi, fechas: string[], u: Umbrales, porPercenti
       nivel: f.nivel,
       celdas,
       maximo: celdas.reduce((m, c) => Math.max(m, c.nivel) as Nivel, 0 as Nivel),
+      fuente: f.fuenteDatos,
     };
     nodos.set(f.indice, nodo);
     const padre = f.padre === null ? undefined : nodos.get(f.padre);
@@ -244,7 +248,12 @@ export const HojaAuditoria = () => {
               key: "n",
               fixed: "left",
               width: 320,
-              render: (_, r) => <span className={r.nivel === 1 ? "font-bold text-tinta" : r.nivel === 2 ? "font-medium" : ""}>{r.nombre}</span>,
+              render: (_, r) => (
+                <span className={`inline-flex items-center gap-1.5 ${r.nivel === 1 ? "font-bold text-tinta" : r.nivel === 2 ? "font-medium" : ""}`}>
+                  {r.nombre}
+                  <MarcaFuenteFila fuente={r.fuente} sujeto="Esta partida" />
+                </span>
+              ),
             },
             ...fechas.map((f, i) => ({
               title: fechaCorta(f),

@@ -4,11 +4,12 @@ import { CheckCircleFilled, CloseOutlined, ExclamationCircleFilled, WarningFille
 import { PANTALLAS, type OrigenDatos } from "@/config/app";
 import { apiSalud } from "@/services/apiDatos";
 import { useOrigenReportado } from "./origenDatos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * Banda entre el encabezado y el contenido que avisa de donde salen los datos de la pantalla
- * (al estilo del aviso de licencia de DevExtreme). Solo en el build desplegado; en desarrollo se
- * fuerza con `VITE_AVISO_ORIGEN_DATOS=true`.
+ * (al estilo del aviso de licencia de DevExtreme). Solo con la bandera de desarrollo
+ * (`VITE_DEVELOPMENT=true`, `src/config/desarrollo.ts`).
  *
  * El origen es el que reporta la pantalla (`useReportarOrigen`) o, si no reporta, el de
  * `PANTALLAS`. Si `/api/health` no esta `Healthy` (SQL caido), todo es JSON.
@@ -16,7 +17,7 @@ import { useOrigenReportado } from "./origenDatos";
  * Se puede cerrar, pero vuelve al cambiar de pantalla o recargar.
  */
 
-const ACTIVO = import.meta.env.PROD || import.meta.env.VITE_AVISO_ORIGEN_DATOS === "true";
+const ACTIVO = MODO_DESARROLLO;
 
 type Aviso = OrigenDatos | "sinSql";
 

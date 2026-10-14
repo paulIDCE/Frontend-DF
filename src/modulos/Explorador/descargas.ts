@@ -1,5 +1,6 @@
 import { ETIQUETA_FUENTE, SIGLA_FUENTE } from "@/services/fuenteDatos";
 import type { CuadroCargado } from "./tipos";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
  * CSV de la tabla con los periodos que se ven (filtro Desde–Hasta). El Excel lo ofrece la propia
@@ -16,7 +17,8 @@ export const descargarCsv = (cuadro: CuadroCargado, periodos: string[]) => {
   csv += `Cuadro: ${cuadro.titulo}\n`;
   if (cuadro.unidad) csv += `Unidad: ${cuadro.unidad}\n`;
   if (cuadro.sectorNombre) csv += `Sector: ${cuadro.sectorNombre}\n`;
-  const fuente = cuadro.fuenteDatos;
+  // La fuente (BD / JSON) solo con la bandera de desarrollo.
+  const fuente = MODO_DESARROLLO ? cuadro.fuenteDatos : null;
   if (fuente) csv += `Fuente de los datos: ${ETIQUETA_FUENTE[fuente]}\n`;
   csv += "\n";
   csv += ["Grupo", "Variable", ...periodos, ...(fuente ? ["Fuente"] : [])].map(celda).join(",") + "\n";

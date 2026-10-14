@@ -5,6 +5,7 @@ import { fechaCorta, fmt, dec } from "../datos";
 import { claseVar } from "../estilos";
 import { opcionCascada, opcionComparativoAnual, opcionHistorico, type PasoCascada } from "../opciones";
 import type { Ctx } from "../datos";
+import { MarcaCodigo } from "../FuentesHoja";
 
 /**
  * Hojas 10 (PyG mensualizado) y 11 (PyG anualizado) — porte de
@@ -73,7 +74,7 @@ const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
   const filas: FilaEvolucion[] = EVOLUCION.filter(([code]) => ctx.fila(codigo(code))).map(([code, n]) => {
     const actual = ctx.valor(codigo(code));
     const anterior = ctx.valor(codigo(code), ctx.anioAnterior);
-    return { key: code, nombre: n, anterior, actual, ratio: anterior > 0 && actual >= 0 ? actual / anterior : null };
+    return { key: codigo(code), nombre: n, anterior, actual, ratio: anterior > 0 && actual >= 0 ? actual / anterior : null };
   });
   const ratio = (r: FilaEvolucion) =>
     r.ratio === null ? "n/a" : <span className={claseVar(r.ratio - 1)}>{dec(r.ratio)}×</span>;
@@ -94,7 +95,13 @@ const RatiosEvolucion = ({ codigo }: { codigo: (code: string) => string }) => {
         ],
       }}
       columns={[
-        { title: "Ratios de evolución", key: "n", render: (_, r) => <span className="font-medium">{r.nombre}</span> },
+        { title: "Ratios de evolución", key: "n", render: (_, r) => (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              {r.nombre}
+              <MarcaCodigo ctx={ctx} code={r.key} sujeto="Esta partida" />
+            </span>
+          ),
+        },
         { title: fechaCorta(ctx.anioAnterior), key: "a", align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} /> },
         {
           title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Acumulado del corte con su ratio de evolución (actual / mismo mes del año anterior)" />,
@@ -194,6 +201,7 @@ const PaginaPyG = ({ anualizado }: { anualizado: boolean }) => {
             titulo={`Cascada de resultados${anualizado ? " (Anualizado)" : ""} - ${fechaCorta(ctx.fecha)}`}
             nota="De los intereses ganados al resultado del ejercicio. Verde suma, rojo resta; en azul, los márgenes del reporte."
             option={opcionCascada(pasosCascada(ctx, c), etiquetas)}
+            codigos={["@51", "Marg_Ne", "Mar_Br_Fi", "Mar_Ne_Fina", "Mar_Inte", "Mar_Oper", "Gan_Pe_Imp", "Gan_Eje"].map(c)}
             alto={360}
             cambioTipo={false}
             estadisticas={false}

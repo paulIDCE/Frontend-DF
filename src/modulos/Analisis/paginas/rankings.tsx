@@ -10,6 +10,7 @@ import { legible } from "../texto";
 import { TrophyOutlined } from "@ant-design/icons";
 import { fechaCorta, fmt, pct, variacion } from "../datos";
 import { COLOR_ENTIDAD, COLOR_GRUPO } from "../opciones";
+import { MarcaCodigo } from "../FuentesHoja";
 
 /**
  * Rankings de entidades (hojas 5, 9, 24, 25, 26) — porte de `RANKING_CONFIGS`
@@ -162,7 +163,15 @@ const PaginaRanking = ({ c }: { c: ConfigRanking }) => {
               dataSource={resumen}
               excel={{ nombre: archivoResumen, columnas: excelResumen }}
               columns={[
-                { title: "Cuenta", render: (_, r) => <span className="font-semibold">{legible(r.name)}</span> },
+                {
+                  title: "Cuenta",
+                  render: (_, r) => (
+                    <span className="inline-flex items-center gap-1.5 font-semibold">
+                      {legible(r.name)}
+                      <MarcaCodigo ctx={ctx} code={r.code} sujeto="Esta cuenta" />
+                    </span>
+                  ),
+                },
                 { title: fechaCorta(ctx.anioAnterior), align: "right", render: (_, r) => <CeldaNumero valor={r.anterior} unidad={unidadResumen(r.code)} /> },
                 {
                   title: <TituloAyuda titulo={fechaCorta(ctx.fecha)} ayuda="Valor del corte con su variación anual (A)" />,

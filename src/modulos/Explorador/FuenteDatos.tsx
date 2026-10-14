@@ -1,12 +1,15 @@
-import { Tag, Tooltip } from "antd";
+import type { ReactNode } from "react";
+import { Popover, Tag, Tooltip } from "antd";
 import { DatabaseOutlined, FileTextOutlined, PartitionOutlined, WarningOutlined } from "@ant-design/icons";
-import type { FilasPorFuente, FuenteDatos, FuenteDatosCuadro } from "@/types/api";
-import { ETIQUETA_FUENTE, SIGLA_FUENTE, TEXTO_SIN_HISTORIA, detalleFuente } from "@/services/fuenteDatos";
+import type { FilasPorFuente, FuenteDatosCuadro } from "@/types/api";
+import { ETIQUETA_FUENTE, SIGLA_FILA, TEXTO_FILA, TEXTO_SIN_HISTORIA, detalleFuente, type FuenteFila } from "@/services/fuenteDatos";
 import { propsColorChip } from "@idce/kit";
+import { MODO_DESARROLLO } from "@/config/desarrollo";
 
 /**
- * Piezas visuales de la fuente de los datos (BD / JSON / mixto). Siempre visibles: sirven para decir
- * en una presentacion de donde sale cada cifra.
+ * Piezas visuales de la fuente de los datos (BD / JSON / mixto): sirven para decir en una
+ * presentacion de donde sale cada cifra. Solo con la bandera de desarrollo (`MODO_DESARROLLO`);
+ * apagada, no pintan nada.
  */
 
 const COLOR = { bd: "accion", json: "neutro", mixto: "identidad" } as const;
@@ -16,24 +19,38 @@ interface InsigniaFuenteProps {
   fuente: FuenteDatosCuadro | null | undefined;
   filasPorFuente?: FilasPorFuente;
   className?: string;
+  /**
+   * Detalle propio al abrir la insignia (la revista: que dato de la hoja sale de cada fuente). Es una
+   * funcion para calcularlo al abrir, cuando la hoja ya se pinto.
+   */
+  detalle?: () => ReactNode;
 }
 
 /** Insignia junto al titulo de un cuadro o reporte. Sin fuente (backend anterior) no pinta nada. */
-export const InsigniaFuente = ({ fuente, filasPorFuente, className = "" }: InsigniaFuenteProps) => {
-  if (!fuente) return null;
+export const InsigniaFuente = ({ fuente, filasPorFuente, className = "", detalle }: InsigniaFuenteProps) => {
+  if (!fuente || !MODO_DESARROLLO) return null;
+  const etiqueta = (
+    <Tag
+      icon={ICONO[fuente]}
+      role="button"
+      tabIndex={0}
+      aria-label={`Fuente de los datos: ${ETIQUETA_FUENTE[fuente]}. ${detalleFuente(fuente, filasPorFuente)}`}
+      className={`m-0 shrink-0 cursor-pointer text-rotulo font-normal ${className}`}
+      {...propsColorChip(COLOR[fuente])}
+    >
+      {ETIQUETA_FUENTE[fuente]}
+    </Tag>
+  );
+  if (detalle)
+    return (
+      <Popover title="Fuente de los datos" content={detalle} trigger={["hover", "click"]} placement="bottomRight">
+        {etiqueta}
+      </Popover>
+    );
   return (
     // Pasar el raton o hacer clic (tactil, presentaciones) muestra el detalle.
     <Tooltip title={detalleFuente(fuente, filasPorFuente)} trigger={["hover", "click"]}>
-      <Tag
-        icon={ICONO[fuente]}
-        role="button"
-        tabIndex={0}
-        aria-label={`Fuente de los datos: ${ETIQUETA_FUENTE[fuente]}. ${detalleFuente(fuente, filasPorFuente)}`}
-        className={`m-0 shrink-0 cursor-pointer text-rotulo font-normal ${className}`}
-        {...propsColorChip(COLOR[fuente])}
-      >
-        {ETIQUETA_FUENTE[fuente]}
-      </Tag>
+      {etiqueta}
     </Tooltip>
   );
 };
@@ -42,16 +59,25 @@ export const InsigniaFuente = ({ fuente, filasPorFuente, className = "" }: Insig
  * Marca por fila. En cuadros mixtos siempre visible; en los de una sola fuente (`alPasar`) aparece
  * al pasar el raton por la fila, para no recargar la tabla.
  */
-export const MarcaFuenteFila = ({ fuente, alPasar = false }: { fuente: FuenteDatos | null | undefined; alPasar?: boolean }) => {
-  if (!fuente) return null;
+export const MarcaFuenteFila = ({
+  fuente,
+  alPasar = false,
+  sujeto = "Esta fila",
+}: {
+  fuente: FuenteFila | null | undefined;
+  alPasar?: boolean;
+  /** "Esta fila", "Este indicador"… */
+  sujeto?: string;
+}) => {
+  if (!fuente || !MODO_DESARROLLO) return null;
   return (
-    <Tooltip title={`Esta fila sale de: ${ETIQUETA_FUENTE[fuente]}${alPasar ? " (como todo el cuadro)" : ""}`}>
+    <Tooltip title={`${sujeto} sale de ${TEXTO_FILA[fuente]}${alPasar ? " (como todo el cuadro)" : ""}.`}>
       <span
-        className={`rounded-sm border px-1 text-rotulo font-normal not-italic leading-4 ${
-          fuente === "bd" ? "border-accion text-accion" : "border-linea text-tinta-tenue"
+        className={`shrink-0 rounded-sm border px-1 text-rotulo font-normal not-italic leading-4 ${
+          fuente === "bd" ? "border-accion text-accion" : fuente === "calculado" ? "border-dashed border-linea text-tinta-secundaria" : "border-linea text-tinta-tenue"
         } ${alPasar ? "opacity-0 transition-opacity [.ant-table-row:hover_&]:opacity-100" : ""}`}
       >
-        {SIGLA_FUENTE[fuente]}
+        {SIGLA_FILA[fuente]}
       </span>
     </Tooltip>
   );
@@ -68,7 +94,7 @@ interface EstadoFuentesProps {
  * las advertencias del backend. Todo en `json` con advertencias = la BD no esta disponible.
  */
 export const EstadoFuentes = ({ cuadros, advertencias }: EstadoFuentesProps) => {
-  if (cuadros === undefined && !advertencias.length) return null;
+  if (!MODO_DESARROLLO || (cuadros === undefined && !advertencias.length)) return null;
   const sinBd = cuadros === null || (cuadros !== undefined && cuadros.bd + cuadros.mixto === 0);
   return (
     <div className="flex flex-col border-0 border-l border-solid border-linea pl-3">

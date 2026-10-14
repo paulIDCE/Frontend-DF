@@ -19,7 +19,8 @@ import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades"
 import { HOJAS_ORDENADAS, SECCIONES, hojaPorNumero, seccionDe } from "./paginas";
 import Kipu from "./kipu/Kipu";
 import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
-import { conteoDeFilas, fuenteDeFilas } from "@/services/fuenteDatos";
+import { conteoDeFilas, detalleFuente, fuenteDeFilas } from "@/services/fuenteDatos";
+import { FuentesHoja } from "./FuentesHoja";
 import { useReportarOrigen } from "@/layout/origenDatos";
 
 /**
@@ -221,7 +222,19 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
                 </span>
               </span>
             )}
-            <InsigniaFuente fuente={fuente} filasPorFuente={conteo} />
+            <InsigniaFuente
+              fuente={fuente}
+              filasPorFuente={conteo}
+              detalle={
+                valor
+                  ? () => <FuentesHoja ctx={valor.ctx} resumen={
+                        conteo
+                          ? `Reporte completo de la entidad: ${conteo.bd} cuentas de la base de datos y ${conteo.json} de archivos JSON.`
+                          : detalleFuente(fuente ?? "mixto")
+                      } />
+                  : undefined
+              }
+            />
           </div>
         </div>
         <nav aria-label="Hojas de la revista" className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-linea pt-2">

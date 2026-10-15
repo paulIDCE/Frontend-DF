@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Dropdown, Select, Spin, Switch, Tooltip } from "antd";
 import {
@@ -13,14 +13,14 @@ import {
   RightOutlined,
 } from "@ant-design/icons";
 import { EstadoError, ImpresionContext, LimiteError, useService } from "@idce/kit";
-import { RevistaContext, type RevistaValor } from "./RevistaContext";
+import { RevistaContext, type FuentesExternas, type RevistaValor } from "./RevistaContext";
 import { MESES, crearCtx, fechasDe } from "./datos";
 import { cargarListaEntidades, cargarReporte, infoDe } from "./resumenEntidades";
 import { HOJAS_ORDENADAS, SECCIONES, hojaPorNumero, seccionDe } from "./paginas";
 import Kipu from "./kipu/Kipu";
 import { InsigniaFuente } from "@/modulos/Explorador/FuenteDatos";
 import { conteoDeFilas, detalleFuente, fuenteDeFilas } from "@/services/fuenteDatos";
-import { FuentesHoja } from "./FuentesHoja";
+import { FuentesExternasHoja, FuentesHoja } from "./FuentesHoja";
 import { useReportarOrigen } from "@/layout/origenDatos";
 
 /**
@@ -116,6 +116,20 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
     };
   }, [imprimiendo, entidad, fecha, pagina]);
 
+  // Fuente que informa una hoja con datos propios (macro), atada a la hoja que la informo.
+  const [externas, setExternas] = useState<{ pagina: number; fuentes: FuentesExternas } | null>(null);
+  const reportarFuentes = useCallback(
+    (fuentes: FuentesExternas | null) =>
+      setExternas((actual) => {
+        if (!fuentes) return actual?.pagina === pagina ? null : actual;
+        // Mismo informe para la misma hoja: no se cambia el estado (evita renders de mas).
+        const igual = actual?.pagina === pagina && JSON.stringify(actual.fuentes) === JSON.stringify(fuentes);
+        return igual ? actual : { pagina, fuentes };
+      }),
+    [pagina]
+  );
+  const fuentesHoja = externas?.pagina === pagina ? externas.fuentes : null;
+
   const valor = useMemo<RevistaValor | null>(() => {
     if (!filas?.length || !fecha) return null;
     const info = infoDe(filas);
@@ -130,8 +144,9 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
       setEntidad: onEntidad,
       sectores,
       setSectores,
+      reportarFuentes,
     };
-  }, [filas, fecha, entidad, pagina, etiquetas, onEntidad, sectores]);
+  }, [filas, fecha, entidad, pagina, etiquetas, onEntidad, sectores, reportarFuentes]);
 
   // Navegacion en el orden de las secciones. Una hoja de segmento abierta por URL (14-16, 20-22)
   // se ubica en la que la reune (13, 19).
@@ -223,10 +238,12 @@ const Revista = ({ entidad, pagina, onPagina, onEntidad, onVolver }: Props) => {
               </span>
             )}
             <InsigniaFuente
-              fuente={fuente}
-              filasPorFuente={conteo}
+              fuente={fuentesHoja ? fuentesHoja.fuente : fuente}
+              filasPorFuente={fuentesHoja ? fuentesHoja.conteo : conteo}
               detalle={
-                valor
+                fuentesHoja
+                  ? () => <FuentesExternasHoja titulo={fuentesHoja.titulo} resumen={fuentesHoja.resumen} datos={fuentesHoja.datos} />
+                  : valor
                   ? () => <FuentesHoja ctx={valor.ctx} resumen={
                         conteo
                           ? `Reporte completo de la entidad: ${conteo.bd} cuentas de la base de datos y ${conteo.json} de archivos JSON.`

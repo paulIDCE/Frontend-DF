@@ -90,6 +90,7 @@ Se verificaron sobre `public/data/reportes/BP__PICHINCHA.json` (776 CUC), `publi
 | 1.19 | Resumen ejecutivo v1 (sin grupo par) | 🔴 KPIs sueltos en el hub | ✅ Cuadro de mando | 🟡 KPI por tablero | Versión completa en la 5.1 | Hoja de entrada con `FilaKpis`, `MiniGrafica`, CAMELS/PERLAS y los hallazgos del motor v1 |
 | 1.20 | Navegación por secciones + estado en la URL; hojas por segmento unificadas | 🟡 31 hojas en lista | ✅ Navegación por tarea | ✅ Tableros por tema | Estructura de 04 §7 | Reagrupar en `Revista.tsx` y `paginas/index.tsx`; hojas 13–16 y 19–22 con selector de segmento |
 | 1.22 | Trazabilidad de la fuente (BD / JSON) y meses sin historia (issue #48) | 🟡 Origen escrito a mano por pantalla | ✅ `fuenteDatos` por cuadro y fila | ✅ Se dice de dónde sale cada cifra | Contrato de fuente de BackendDF (14/10/2026) | Insignia por cuadro, marca por fila en mixtos, «—» sin historia, columna Fuente en descargas, resumen de `/api/meta`, banda `AvisoOrigenDatos` con la fuente real |
+| 1.23 | Entorno macroeconómico en la Revista + hub en acordeón (issue #50) | 🔴 Solo el explorador de cuadros macro | — | — | Maqueta `Libro1.xlsx` y `data-financiero.zip` (14/10/2026); chatbot fuera de alcance | Hojas 37–52 (sectores real, monetario, externo y fiscal) con cuadros BCE de `/api/cuadros`, textos de plantilla y fuente BD/JSON; hub en acordeón. Huecos de fuente en 3.12 |
 
 ---
 
@@ -124,6 +125,7 @@ Se verificaron sobre `public/data/reportes/BP__PICHINCHA.json` (776 CUC), `publi
 | 3.6 | Concentración de los 25 y 100 mayores depositantes | 🔴 | — | ✅ | Riesgo de liquidez; la SB/SEPS lo publican en la liquidez estructural | Cargar la fuente; indicador en Liquidez y solvencia |
 | 3.7 | Cobertura geográfica (provincia y cantón) | 🔴 Solo la provincia de la matriz | — | ✅ Con mapa | La más factible de 05 §4.5: la SB/SEPS publican volumen de crédito y captaciones por cantón | Fuente nueva + pantalla con mapa en Sistema Financiero |
 | 3.8 | Liquidez de 1 a 90 días / obligaciones | 🟡 Índices de liquidez de la hoja 28 | — | ✅ KPI | Numerador y denominador por verificar | Buscar el detalle de inversiones por plazo en `EFI06`; si no está, es fuente nueva |
+| 3.12 | Fuentes macro faltantes (issue #51) | 🔴 Tarjeta «Fuente pendiente» en las hojas macro | — | — | EMBI de la región, inflación LatAm, remesas por país, inversión directa por modalidad y cifras semanales del BCE no están en `base_*.json` | Ingerir los cuadros en el pipeline R y servirlos por `/api/cuadros` |
 
 ---
 

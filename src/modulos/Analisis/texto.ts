@@ -12,11 +12,15 @@ const SIGLAS = new Map(
   [
     "ROA", "ROE", "CAMELS", "PERLAS", "PyG", "MOA", "MOP", "USD", "SD", "COVID-19", "VIS", "TAM", "IVF", "PCC",
     "CP", "SB", "SEPS", "RFD", "PT", "EFI04", "EFI06", "CUC", "COAC", "IF", "N°", "Z", "PYMES", "FD",
+    // Entorno macroeconomico (cuadros del BCE).
+    "PIB", "BCE", "VAB", "FBKF", "IPC", "WTI", "OPEP", "OSD", "OSF", "SPNF", "DEG", "FMI", "ALADI", "SUCRE", "RI",
+    "M1", "M2", "FOB", "CIF", "GAD", "EMBI", "SOFR", "PRIME", "CME", "INEC", "IESS", "BDE", "ISFLSH",
   ].map((s) => [s.toUpperCase(), s]),
 );
 
 /** Nombres propios que mantienen la mayuscula inicial. */
-const PROPIOS = new Set(["Ecuador", "Pichincha", "Guayaquil", "Quito"]);
+const PROPIOS = new Set(["Ecuador", "Pichincha", "Guayaquil", "Quito", "Estados", "Unidos", "América", "Napo", "Oriente", "Brent", "Urals"]);
+const PROPIOS_MAYUS = new Map([...PROPIOS].map((p) => [p.toLowerCase(), p]));
 
 const RE_PALABRA = /[\p{L}\p{N}°-]+/gu;
 /** Inicio de cada tramo: comienzo del texto o despues de " - " / " · ". */
@@ -40,6 +44,8 @@ export const legible = (texto: string): string => {
     const conSiglas = minusculas.replace(RE_PALABRA, (p, i: number) => {
       const sigla = SIGLAS.get(p.toUpperCase());
       if (sigla) return sigla;
+      const propio = PROPIOS_MAYUS.get(p);
+      if (propio) return propio;
       // "(c)" -> "(C)": componente de CAMELS / PERLAS.
       if (p.length === 1 && minusculas[i - 1] === "(" && minusculas[i + 1] === ")") return p.toUpperCase();
       return p;

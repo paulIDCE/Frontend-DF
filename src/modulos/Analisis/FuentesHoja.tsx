@@ -60,6 +60,40 @@ export const FuentesHoja = ({ ctx, resumen }: { ctx: Ctx; resumen: ReactNode }) 
   );
 };
 
+/**
+ * Detalle de la insignia en una hoja que no lee el reporte de la entidad (Entorno macroeconomico):
+ * sus cuadros agrupados por fuente.
+ */
+export const FuentesExternasHoja = ({ titulo, resumen, datos }: { titulo: string; resumen: ReactNode; datos: DatoFuente[] }) => {
+  const porFuente = new Map<FuenteFila, string[]>();
+  datos.forEach(({ fuente, nombre }) => {
+    if (!fuente) return;
+    const lista = porFuente.get(fuente) ?? [];
+    if (!lista.includes(nombre)) lista.push(nombre);
+    porFuente.set(fuente, lista);
+  });
+  return (
+    <div className="flex max-w-96 flex-col gap-2 text-detalle">
+      <p className="m-0 text-tinta-secundaria">{resumen}</p>
+      <p className="m-0 font-semibold text-tinta">{titulo}:</p>
+      {GRUPOS.filter((g) => porFuente.has(g.fuente)).map(({ fuente, titulo: t }) => (
+        <section key={fuente} className="flex flex-col gap-1">
+          <span className="flex items-center gap-2 font-semibold text-tinta">
+            <MarcaFuenteFila fuente={fuente} sujeto="Este grupo" /> {t} ({porFuente.get(fuente)!.length})
+          </span>
+          <ul className="m-0 list-none p-0 pl-1">
+            {porFuente.get(fuente)!.map((n) => (
+              <li key={n} className="text-tinta-secundaria">
+                {n}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+};
+
 /** Marca de fuente de un indicador de la revista (KPIs, minis, filas de tabla). */
 export const MarcaCodigo = ({ ctx, code, sujeto = "Este indicador" }: { ctx: Ctx; code: string; sujeto?: string }) => (
   <MarcaFuenteFila fuente={fuenteDeFila(ctx.fila(code))} sujeto={sujeto} />

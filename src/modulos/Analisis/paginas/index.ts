@@ -13,6 +13,10 @@ import { HojaFuentesUsos } from "./fuentesUsos";
 import { HojaRankingIndicador } from "./rankingIndicador";
 import { HojaResumen } from "./resumen";
 import { CarteraPorSegmento, MontosPorSegmento } from "./segmentos";
+import { HojaMacroEmpleo, HojaMacroGasto, HojaMacroInflacion, HojaMacroPetroleo, HojaMacroPib, HojaMacroVab } from "./macroReal";
+import { HojaMacroAgregados, HojaMacroCaptaciones, HojaMacroPanoramas, HojaMacroReservas, HojaMacroSistemaBalances } from "./macroMonetario";
+import { HojaMacroBalanza, HojaMacroCuentaCorriente, HojaMacroRemesas } from "./macroExterno";
+import { HojaMacroDeuda, HojaMacroFiscal } from "./macroFiscal";
 
 /**
  * Indice de hojas de la revista (`pageNames` de prueba-data `analisis.js`) y su navegacion por
@@ -70,6 +74,23 @@ export const HOJAS: Hoja[] = [
   h(34, "Fuentes y Usos", HojaFuentesUsos),
   h(35, "Ranking por Indicador", HojaRankingIndicador),
   h(36, "Resumen Ejecutivo", HojaResumen),
+  // Entorno macroeconomico (cuadros del BCE; maqueta `Libro1.xlsx`): no dependen de la entidad.
+  h(37, "Producto interno bruto", HojaMacroPib),
+  h(38, "VAB por industria", HojaMacroVab),
+  h(39, "PIB por enfoque del gasto", HojaMacroGasto),
+  h(40, "Inflación", HojaMacroInflacion),
+  h(41, "Empleo", HojaMacroEmpleo),
+  h(42, "Petróleo y riesgo país", HojaMacroPetroleo),
+  h(43, "Reservas internacionales", HojaMacroReservas),
+  h(44, "Sistema de balances del BCE", HojaMacroSistemaBalances),
+  h(45, "Agregados monetarios", HojaMacroAgregados),
+  h(46, "Captaciones y cartera", HojaMacroCaptaciones),
+  h(47, "Panorama BCE y OSD", HojaMacroPanoramas),
+  h(48, "Cuenta corriente", HojaMacroCuentaCorriente),
+  h(49, "Remesas e inversión directa", HojaMacroRemesas),
+  h(50, "Balanza comercial", HojaMacroBalanza),
+  h(51, "Resultado fiscal e ingresos", HojaMacroFiscal),
+  h(52, "Erogaciones y deuda pública", HojaMacroDeuda),
 ];
 
 export interface Seccion {
@@ -79,6 +100,10 @@ export interface Seccion {
 
 /** Secciones por tarea del usuario (04 §7), en orden de lectura. */
 export const SECCIONES: Seccion[] = [
+  { titulo: "Macro · Sector real", hojas: [37, 38, 39, 40, 41, 42] },
+  { titulo: "Macro · Sector monetario", hojas: [43, 44, 45, 46, 47] },
+  { titulo: "Macro · Sector externo", hojas: [48, 49, 50] },
+  { titulo: "Macro · Sector fiscal", hojas: [51, 52] },
   { titulo: "Resumen", hojas: [36] },
   { titulo: "Estados financieros", hojas: [1, 2, 10, 11, 34] },
   { titulo: "Estructura", hojas: [3, 4, 6, 7, 8] },

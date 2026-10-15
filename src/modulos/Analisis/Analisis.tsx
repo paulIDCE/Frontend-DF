@@ -10,6 +10,7 @@ import {
   DatabaseOutlined,
   DollarOutlined,
   FileTextOutlined,
+  GlobalOutlined,
   LineChartOutlined,
   PieChartOutlined,
   SettingOutlined,
@@ -21,7 +22,7 @@ import { archivoEntidad } from "@/services/datosService";
 import { apiEntidad, apiMeta } from "@/services/apiDatos";
 import { cargarListaEntidades } from "./resumenEntidades";
 import Revista from "./Revista";
-import { legible } from "./texto";
+import { AcordeonReportes, type ReporteHub } from "./AcordeonReportes";
 import { HOJAS } from "./paginas";
 
 /**
@@ -35,13 +36,71 @@ import { HOJAS } from "./paginas";
 
 const ENTIDAD_INICIAL = "BP. AMAZONAS";
 
-const REPORTES = [
-  { tipo: "resumen", pagina: 36, icono: BulbOutlined, titulo: "Resumen Ejecutivo", texto: "KPIs, grupo par, calificaciones y hallazgos principales" },
-  { tipo: "balances", pagina: 1, icono: SettingOutlined, titulo: "Balances Financieros: Principales Cuentas", texto: "Reporte detallado de los balances financieros" },
-  { tipo: "intermediacion", pagina: 12, icono: DatabaseOutlined, titulo: "Intermediación Financiera", texto: "Análisis de colocaciones y captaciones" },
-  { tipo: "indicadores", pagina: 27, icono: FileTextOutlined, titulo: "Indicadores Financieros", texto: "Métricas clave" },
-  { tipo: "tasas", pagina: 30, icono: SwapOutlined, titulo: "Tasas de Interés", texto: "Análisis de tasas de interés" },
-  { tipo: "comparativo", pagina: 31, icono: BarChartOutlined, titulo: "Comparativa de Indicadores", texto: "Comparación de métricas clave por entidad financiera" },
+/** Tarjetas del hub (acordeon). `pagina` es la hoja de la revista donde abre cada reporte. */
+const REPORTES: ReporteHub[] = [
+  {
+    clave: "macro",
+    pagina: 37,
+    icono: GlobalOutlined,
+    titulo: "Entorno macroeconómico",
+    tagline: "Actividad económica",
+    badge: "Macroeconomía",
+    texto: "PIB, inflación, empleo, petróleo, sector monetario, externo y fiscal con los cuadros del BCE: resultados mensuales, trimestrales y anuales.",
+  },
+  {
+    clave: "resumen",
+    pagina: 36,
+    icono: BulbOutlined,
+    titulo: "Resumen ejecutivo",
+    tagline: "Cuadro de mando",
+    badge: "Resumen",
+    texto: "KPIs, grupo par, calificaciones y hallazgos principales de la entidad.",
+  },
+  {
+    clave: "balances",
+    pagina: 1,
+    icono: SettingOutlined,
+    titulo: "Balances financieros",
+    tagline: "Estado de situación",
+    badge: "Balances",
+    texto: "Principales cuentas del balance general: activo, pasivo y patrimonio con sus variaciones mensuales y anuales.",
+  },
+  {
+    clave: "intermediacion",
+    pagina: 12,
+    icono: DatabaseOutlined,
+    titulo: "Intermediación financiera",
+    tagline: "Flujos de colocación",
+    badge: "Crédito",
+    texto: "Colocaciones y captaciones: cartera bruta, neta, vencida y calidad de activos por segmento.",
+  },
+  {
+    clave: "indicadores",
+    pagina: 27,
+    icono: FileTextOutlined,
+    titulo: "Indicadores financieros",
+    tagline: "Métricas de desempeño",
+    badge: "KPIs",
+    texto: "Eficiencia, liquidez, solvencia y rentabilidad, con las metodologías CAMELS y PERLAS.",
+  },
+  {
+    clave: "tasas",
+    pagina: 30,
+    icono: SwapOutlined,
+    titulo: "Tasas de interés",
+    tagline: "Costo del dinero",
+    badge: "Tasas",
+    texto: "Evolución de tasas activas y pasivas por segmento de cartera y plazos de captación.",
+  },
+  {
+    clave: "comparativo",
+    pagina: 31,
+    icono: BarChartOutlined,
+    titulo: "Comparativa de indicadores",
+    tagline: "Benchmarking sectorial",
+    badge: "Ranking",
+    texto: "Compara la entidad frente al sistema financiero: rankings, participaciones y posiciones.",
+  },
 ];
 
 const cargarInfo = async (entidad: string) => {
@@ -167,24 +226,7 @@ const Analisis = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          {REPORTES.map((r) => (
-            <button
-              key={r.tipo}
-              type="button"
-              onClick={() => setRevista(r.pagina)}
-              className="flex cursor-pointer items-center gap-4 rounded-contenedor border border-linea bg-superficie p-4 text-left shadow-tarjeta transition-colors hover:border-accion hover:bg-accion-sutil"
-            >
-              <span className="inline-flex text-cifra text-accion">
-                <r.icono />
-              </span>
-              <div>
-                <h4 className="m-0 text-cuerpo font-semibold text-tinta">{legible(r.titulo)}</h4>
-                <p className="m-0 text-detalle text-tinta-tenue">{r.texto}</p>
-              </div>
-            </button>
-          ))}
-        </div>
+        <AcordeonReportes reportes={REPORTES} onAbrir={setRevista} />
       </div>
 
       <div className="flex items-center justify-between rounded-contenedor bg-superficie p-5 shadow-tarjeta">
